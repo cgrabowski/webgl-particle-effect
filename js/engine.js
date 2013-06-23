@@ -16,7 +16,7 @@ webGLStart = function() {
 
   var pMatrix = mat4.create()
   mat4.identity(pMatrix)
-  mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix)
+  mat4.perspective(pMatrix, 0.79, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0)
   var effect = new ParticleEffect(gl, pMatrix, 'shader-vs', 'shader-fs', callback, [{
       textSource: 'nehe.gif',
       minParticles: 5,
@@ -36,7 +36,7 @@ webGLStart = function() {
 
   function callback() {
     mat4.identity(effect.mvMatrix)
-    mat4.translate(effect.mvMatrix, [0.0, -1.0, -5.0])
+    mat4.translate(effect.mvMatrix, effect.mvMatrix, [0.0, -1.0, -5.0])
     console.log(effect)
     render()
   }

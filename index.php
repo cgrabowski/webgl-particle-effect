@@ -3,7 +3,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <title>WebGL Particle Effect</title>
-    <script type="text/javascript" src="js/glMatrix-0.9.5.min.js"></script>
+    <script type="text/javascript" src="js/gl-matrix.js"></script>
     <script type="text/javascript" src="js/webgl-utils.js"></script>
     <script id="shader-fs" type="x-shader/x-fragment">
       precision mediump float;

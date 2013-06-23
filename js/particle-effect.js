@@ -172,11 +172,13 @@ function ParticleEmitter(effect, opts) {
   this.minDirZ = opts.minDirZ || 0
   this.maxDirZ = opts.maxDirZ || 0
   this.wind = opts.wind || [0, 0, 0]
-  this.minRotation = opts.minRotation || 0
-  this.maxRotation = opts.maxRotation || 180
+  this.minRot = opts.minRot || 720
+  this.MaxRot = opts.maxRot || 720
+  this.minRotVec = opts.minRotVec || [0, 0, 1]
+  this.maxRotVec = opts.maxRotVec || [0, 0, 1]
+  this.rotAcc = 0
 
   this.matrix = mat4.create()
-
   this.lives = []
   this.lifeElapsed = []
   this.directions = []
@@ -254,9 +256,7 @@ ParticleEmitter.prototype.render = function(delta) {
       // reset elapsed (negative elapsed creates delay)
       elapsed[i] = (-rp(minDelay, maxDelay))
       // determine a new directional vector
-      directions[i * 3] = rp(this.minDirX, this.maxDirX)
-      directions[i * 3 + 1] = rp(this.minDirY, this.maxDirY)
-      directions[i * 3 + 2] = rp(this.minDirZ, this.maxDirZ)
+      directions.splice(i * 3, 3, rp(this.minDirX, this.maxDirX), rp(this.minDirY, this.maxDirY), rp(this.minDirZ, this.maxDirZ))
     }
   }
 
@@ -273,13 +273,14 @@ ParticleEmitter.prototype.render = function(delta) {
     // if elapsed is negative, the particle is delayed
     if (elapsed[i] < 0)
       continue
-    m4.identity(matrix)
-    m4.multiply(matrix, effectMat)
-    m4.translate(matrix, [
+    m4.identity(matrix)  
+    m4.multiply(matrix, matrix, effectMat)
+    m4.translate(matrix, matrix, [
       elapsed[i] * speeds[i] * directions[i * 3],
       elapsed[i] * speeds[i] * directions[i * 3 + 1],
       elapsed[i] * speeds[i] * directions[i * 3 + 2]
     ])
+    
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, matrix)
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, i * 6 * 2)
   }
@@ -290,5 +291,12 @@ ParticleEmitter.randlerp = function(min, max, rnd) {
     return Math.round(Math.random() * (max - min) + min)
   else
     return Math.random() * (max - min) + min
+}
+
+ParticleEmitter.lerp = function(min, max, factor, rnd) {
+  if (rnd)
+    return Math.round(factor * (max - min) + min)
+  else
+    return factor * (max - min) + min
 }
 
