@@ -157,12 +157,14 @@ function ParticleEmitter(effect, opts) {
   this.coninuous = opts.continuous || true
   this.minDelay = opts.minDelay || 0
   this.maxDelay = opts.maxDelay || 0
+
   this.xOffsetMin = opts.xOffsetMin || -1
   this.yOffsetMin = opts.yOffsetMin || 0
   this.zOffsetMin = opts.zOffsetMin || 0
   this.xOffsetMax = opts.xOffsetMax || 1
   this.yOffsetMax = opts.yOffsetMax || 0
   this.zOffsetMax = opts.zOffsetMax || 0
+
   this.minSpeed = opts.minSpeed || 0.0001
   this.maxSpeed = opts.maxSpeed || 0.001
   this.minDirX = opts.minDirX || -0.25
@@ -171,6 +173,7 @@ function ParticleEmitter(effect, opts) {
   this.maxDirY = opts.maxDirY || 1
   this.minDirZ = opts.minDirZ || 0
   this.maxDirZ = opts.maxDirZ || 0
+
   this.wind = opts.wind || [0, 0, 0]
   this.minRot = opts.minRot || 720
   this.MaxRot = opts.maxRot || 720
@@ -181,27 +184,20 @@ function ParticleEmitter(effect, opts) {
   this.matrix = mat4.create()
   this.lives = []
   this.lifeElapsed = []
+  this.starts = []
   this.directions = []
   this.speeds = []
-  this.vertices = []
-  this.textCoords = []
-  this.indices = []
+
+  this.vertices = [-0.1, -0.1, 0.1, 0.1, -0.1, 0.1, 0.1, 0.1, 0.1, -0.1, 0.1, 0.1]
+  this.textCoords = [0, 0, 1, 0, 1, 1, 0, 1]
+  this.indices = [0, 1, 2, 0, 2, 3]
+
   for (i = 0; i < this.maxParticles; i++) {
     this.lives.push(rp(this.minLife, this.maxLife, true))
     this.lifeElapsed.push(-rp(this.minDelay, this.maxDelay, true))
+    this.starts.push(rp(this.xOffsetMin, this.xOffsetMax), rp(this.yOffsetMin, this.yOffsetMax), rp(this.zOffsetMin, this.zOffsetMax))
     this.directions.push(rp(this.minDirX, this.maxDirX), rp(this.minDirY, this.maxDirY), rp(this.minDirZ, this.maxDirZ))
     this.speeds.push(rp(this.minSpeed, this.maxSpeed))
-    var xSet = rp(this.xOffsetMin, this.xOffsetMax)
-            , ySet = rp(this.yOffsetMin, this.yOffsetMax)
-            , zSet = rp(this.zOffsetMin, this.zOffsetMax)
-    this.vertices.push(
-            -0.1 + xSet, -0.1 + ySet, 0.1 + zSet
-            , 0.1 + xSet, -0.1 + ySet, 0.1 + zSet
-            , 0.1 + xSet, 0.1 + ySet, 0.1 + zSet
-            , -0.1 + xSet, 0.1 + ySet, 0.1 + zSet
-            )
-    this.textCoords.push(0, 0, 1, 0, 1, 1, 0, 1)
-    this.indices.push(0 + (i * 4), 1 + (i * 4), 2 + (i * 4), 0 + (i * 4), 2 + (i * 4), 3 + (i * 4))
   }
 
   this.vertId = opts.vertId || null
@@ -212,6 +208,11 @@ function ParticleEmitter(effect, opts) {
     this.shaderProgram = effect.shaderProgram
 
   this.initBuffers()
+  
+  var starts = this.starts
+  window.addEventListener('keydown', function (e) {
+    console.log(starts)
+  })
 }
 
 ParticleEmitter.prototype = new ParticleEffect
@@ -223,17 +224,23 @@ ParticleEmitter.prototype.render = function(delta) {
           , text = this.texture
           , pMatrix = this.effect.pMatrix
           , shaderProgram = (this.shaderProgram || effect.shaderProgram)
+
           , minLife = this.minLife
           , maxLife = this.maxLife
           , minDelay = this.minDelay
           , maxDelay = this.maxDelay
+
           , lives = this.lives
           , elapsed = this.lifeElapsed
           , lifeLen = this.lives.length
+
+          , starts = this.starts
           , speeds = this.speeds
           , directions = this.directions
+
           , effectMat = this.effect.mvMatrix
           , matrix = this.matrix
+
           , rp = ParticleEmitter.randlerp
           , m4 = mat4
 
@@ -243,14 +250,6 @@ ParticleEmitter.prototype.render = function(delta) {
     elapsed[i] += delta
     // if particle's life is elapsed, it needs resurected
     if (elapsed[i] > lives[i]) {
-      // vertices hold starting point data
-      var verts = this.vertices
-              , xSet = rp(this.xOffsetMin, this.xOffsetMax)
-              , ySet = rp(this.yOffsetMin, this.yOffsetMax)
-              , zSet = rp(this.zOffsetMin, this.zOffsetMax)
-      verts.splice(i * 12, 12, -0.1 + xSet, -0.1 + ySet, 0.1 + zSet, 0.1 + xSet, -0.1 + ySet, 0.1 + zSet, 0.1 + xSet, 0.1 + ySet, 0.1 + zSet, -0.1 + xSet, 0.1 + ySet, 0.1 + zSet)
-      gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff)
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW)
       // new lifespan
       lives[i] = rp(minLife, maxLife, true)
       // reset elapsed (negative elapsed creates delay)
@@ -273,16 +272,16 @@ ParticleEmitter.prototype.render = function(delta) {
     // if elapsed is negative, the particle is delayed
     if (elapsed[i] < 0)
       continue
-    m4.identity(matrix)  
+    m4.identity(matrix)
     m4.multiply(matrix, matrix, effectMat)
     m4.translate(matrix, matrix, [
-      elapsed[i] * speeds[i] * directions[i * 3],
-      elapsed[i] * speeds[i] * directions[i * 3 + 1],
-      elapsed[i] * speeds[i] * directions[i * 3 + 2]
+      starts[i * 3] + elapsed[i] * speeds[i] * directions[i * 3],
+      starts[i * 3 + 1] + elapsed[i] * speeds[i] * directions[i * 3 + 1],
+      starts[i * 3 + 2] + elapsed[i] * speeds[i] * directions[i * 3 + 2]
     ])
-    
+
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, matrix)
-    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, i * 6 * 2)
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0)
   }
 }
 
