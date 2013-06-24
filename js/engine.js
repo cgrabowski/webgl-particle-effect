@@ -14,10 +14,7 @@ webGLStart = function() {
   gl.enable(gl.DEPTH_TEST)
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight)
 
-  var pMatrix = mat4.create()
-  mat4.identity(pMatrix)
-  mat4.perspective(pMatrix, 0.79, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0)
-  var effect = new ParticleEffect(gl, pMatrix, 'shader-vs', 'shader-fs', callback, [{
+  var effect = new ParticleEffect(gl, null, null, 'shader-vs', 'shader-fs', render, [{
       textSource: 'nehe.gif',
       minParticles: 5,
       maxParticles: 100,
@@ -33,13 +30,6 @@ webGLStart = function() {
       minDelay: 500,
       maxDelay: 5000
     }])
-
-  function callback() {
-    mat4.identity(effect.mvMatrix)
-    mat4.translate(effect.mvMatrix, effect.mvMatrix, [0.0, -1.0, -5.0])
-    console.log(effect)
-    render()
-  }
 
   function render() {
     requestAnimFrame(arguments.callee)

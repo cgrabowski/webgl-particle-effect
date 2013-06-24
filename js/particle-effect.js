@@ -1,4 +1,4 @@
-function ParticleEffect(gl, pMatrix, vertId, fragId, callback, emittersOpts) {
+function ParticleEffect(gl, vMatrix, pMatrix, vertId, fragId, callback, emittersOpts) {
   if (arguments.length === 0)
     return
   if (!gl || !gl instanceof WebGLRenderingContext)
@@ -7,12 +7,18 @@ function ParticleEffect(gl, pMatrix, vertId, fragId, callback, emittersOpts) {
   var textFac = ParticleEffect.textureFactory
 
   this.gl = gl
-  this.pMatrix = pMatrix
+  this.vMatrix = vMatrix || mat4.create()
+  this.pMatrix = pMatrix || mat4.perspective(mat4.create(), 0.79, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0)
   this.mvMatrix = mat4.create()
   this.emitters = []
   this.textureSources = []
   this.oldTime = new Date().getTime()
   this.delta = 0
+
+  mat4.identity(this.vMatrix)
+  mat4.lookAt(this.vMatrix, [-1, 0, 5], [0, 0, -5], [0, 1, 0])
+  mat4.translate(this.vMatrix, this.vMatrix, [0.0, -1.0, -5.0])
+  console.log(this)
 
   this.createShaderProgram(gl, vertId, fragId)
 
@@ -208,10 +214,12 @@ function ParticleEmitter(effect, opts) {
     this.shaderProgram = effect.shaderProgram
 
   this.initBuffers()
-  
-  var starts = this.starts
-  window.addEventListener('keydown', function (e) {
-    console.log(starts)
+
+  var matrix = this.matrix
+    , vMatrix = this.effect.vMatrix
+    , pMatrix = this.effect.pMatrix
+  window.addEventListener('keydown', function(e) {
+    console.log("model: %o\nview: %o\nprojection: %o", matrix, vMatrix, pMatrix)
   })
 }
 
@@ -222,8 +230,11 @@ ParticleEmitter.prototype.render = function(delta) {
   var gl = this.effect.gl
           , numParticles = this.maxParticles
           , text = this.texture
-          , pMatrix = this.effect.pMatrix
           , shaderProgram = (this.shaderProgram || effect.shaderProgram)
+
+          , matrix = this.matrix
+          , vMatrix = this.effect.vMatrix
+          , pMatrix = this.effect.pMatrix
 
           , minLife = this.minLife
           , maxLife = this.maxLife
@@ -237,9 +248,6 @@ ParticleEmitter.prototype.render = function(delta) {
           , starts = this.starts
           , speeds = this.speeds
           , directions = this.directions
-
-          , effectMat = this.effect.mvMatrix
-          , matrix = this.matrix
 
           , rp = ParticleEmitter.randlerp
           , m4 = mat4
@@ -273,7 +281,7 @@ ParticleEmitter.prototype.render = function(delta) {
     if (elapsed[i] < 0)
       continue
     m4.identity(matrix)
-    m4.multiply(matrix, matrix, effectMat)
+    m4.multiply(matrix, matrix, vMatrix)
     m4.translate(matrix, matrix, [
       starts[i * 3] + elapsed[i] * speeds[i] * directions[i * 3],
       starts[i * 3 + 1] + elapsed[i] * speeds[i] * directions[i * 3 + 1],
