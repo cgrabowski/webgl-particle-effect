@@ -5,6 +5,8 @@
     <title>WebGL Particle Effect</title>
     <script type="text/javascript" src="js/gl-matrix.js"></script>
     <script type="text/javascript" src="js/webgl-utils.js"></script>
+    <script id="default-json" type="application/json" src="default.json"></script>
+    <script id="example-json" type="application/json" src="example.json"></script>
     <script id="shader-vs" type="x-shader/x-vertex">
       attribute vec3 aVertexPosition;
       attribute vec2 aTextureCoord;

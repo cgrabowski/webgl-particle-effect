@@ -1,0 +1,28 @@
+[
+  {
+    "name": "shared",
+    "maxParticles": 500,
+    "minDirZ": -1,
+    "maxDirZ": 1,
+    "minDelay": 0,
+    "maxDelay": 0
+  }, {
+    "name": "emitter0",
+    "textSource": "igimg/plasma32-1.png"
+  }, {
+    "name": "emitter1",
+    "textSource": "igimg/plasma32-2.png"
+  }, {
+    "name": "emitter2",
+    "textSource": "igimg/plasma32-3.png"
+  }, {
+    "name": "emitter3",
+    "textSource": "igimg/plasma32-12.png"
+  }, {
+    "name": "emitter4",
+    "textSource": "igimg/plasma32-22.png"
+  }, {
+    "name": "emitter5",
+    "textSource": "igimg/plasma32-32.png"
+  }
+]

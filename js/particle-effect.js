@@ -1,4 +1,4 @@
-function ParticleEffect(gl, vMatrix, pMatrix, vertId, fragId, callback, emittersOpts) {
+function ParticleEffect (gl, vMatrix, pMatrix, vertId, fragId, callback, defaultOpts, emittersOpts) {
   if (arguments.length === 0)
     return
   if (!gl || !gl instanceof WebGLRenderingContext)
@@ -18,22 +18,27 @@ function ParticleEffect(gl, vMatrix, pMatrix, vertId, fragId, callback, emitters
   mat4.identity(this.vMatrix)
   mat4.lookAt(this.vMatrix, [-1, 0, 5], [0, 0, -5], [0, 1, 0])
   mat4.translate(this.vMatrix, this.vMatrix, [0.0, -1.0, -15.0])
-  console.log(this)
 
   this.createShaderProgram(gl, vertId, fragId)
 
-  if (!emittersOpts instanceof Array)
-    emitterOpts = [emittersOpts]
-
-  for (var i = 0; i < emittersOpts.length; i++) {
-    this.textureSources[i] = emittersOpts[i].textSource || 'particle.png'
-    this.emitters[i] = new ParticleEmitter(this, emittersOpts[i])
+  for (var i = 0; i < emittersOpts.length /*!*/ - 1 /*!*/; i++) {
+    var opts = {}
+    for (var opt in defaultOpts)
+      opts[opt] = defaultOpts[opt]
+    for (var opt in opts) {
+      if (emittersOpts[i + 1][opt])
+        opts[opt] = emittersOpts[i + 1][opt]
+      else if (emittersOpts[0][opt])
+        opts[opt] = emittersOpts[0][opt]
+    }
+    this.textureSources[i] = emittersOpts[i + 1].textSource || emittersOpts[0].textSource
+    this.emitters[i] = new ParticleEmitter(this, opts, i)
   }
 
   textFac(this.textureSources, assignTextures)
 
   var self = this
-  function assignTextures() {
+  function assignTextures () {
     for (i = 0; i < textFac.textures.length; i++)
       self.emitters[i].texture = textFac.textures[i]
     callback()
@@ -42,7 +47,7 @@ function ParticleEffect(gl, vMatrix, pMatrix, vertId, fragId, callback, emitters
 
 ParticleEffect.prototype = {
   constructor: ParticleEffect,
-  render: function() {
+  render: function () {
     var newTime = new Date().getTime()
     this.delta = newTime - this.oldTime
     this.oldTime = newTime
@@ -50,10 +55,10 @@ ParticleEffect.prototype = {
     for (var i = 0; i < ln; i++)
       this.emitters[i].render(this.delta)
   },
-  getShader: function(gl, id) {
+  getShader: function (gl, id) {
     var str = ""
-            , shaderScript = document.getElementById(id)
-            , shader
+      , shaderScript = document.getElementById(id)
+      , shader
 
     if (!shaderScript)
       return null
@@ -76,15 +81,14 @@ ParticleEffect.prototype = {
     gl.compileShader(shader)
 
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      console.log(gl.getShaderInfoLog(shader))
       return null
     }
     return shader
   },
-  createShaderProgram: function(gl, vertId, fragId) {
+  createShaderProgram: function (gl, vertId, fragId) {
     var fragmentShader = this.getShader(gl, fragId)
-            , vertexShader = this.getShader(gl, vertId)
-            , prog = this.shaderProgram = gl.createProgram()
+      , vertexShader = this.getShader(gl, vertId)
+      , prog = this.shaderProgram = gl.createProgram()
 
     gl.attachShader(prog, vertexShader)
     gl.attachShader(prog, fragmentShader)
@@ -102,7 +106,7 @@ ParticleEffect.prototype = {
     prog.mvMatrixUniform = gl.getUniformLocation(prog, "uMVMatrix")
     prog.samplerUniform = gl.getUniformLocation(prog, "uSampler")
   },
-  initBuffers: function() {
+  initBuffers: function () {
     this.vertBuff = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff)
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW)
@@ -118,14 +122,14 @@ ParticleEffect.prototype = {
 }
 
 
-ParticleEffect.textureFactory = function(sources, onload) {
+ParticleEffect.textureFactory = function (sources, onload) {
   if (typeof(sources) === 'string')
     sources = [sources]
 
   var numLoaded = 0
 
   for (var i = 0; i < sources.length; i++) {
-    ParticleEffect.textureFactory.textures[i] = initTexture(sources[i], function() {
+    ParticleEffect.textureFactory.textures[i] = initTexture(sources[i], function () {
       if (++numLoaded === sources.length)
         onload()
     })
@@ -134,10 +138,10 @@ ParticleEffect.textureFactory = function(sources, onload) {
 
 ParticleEffect.textureFactory.textures = []
 
-function initTexture(src, callback) {
+function initTexture (src, callback) {
   var texture = gl.createTexture()
   texture.image = new Image()
-  texture.image.onload = function() {
+  texture.image.onload = function () {
     gl.bindTexture(gl.TEXTURE_2D, texture)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image)
@@ -151,16 +155,17 @@ function initTexture(src, callback) {
   return texture
 }
 
-function ParticleEmitter(effect, opts) {
+function ParticleEmitter (effect, opts, index) {
   var rp = ParticleEmitter.randlerp
-
   this.effect = effect || null
+
+  this.name = opts.name || ((index) ? "emitter " + index : "unamed effect")
   this.minParticles = opts.minParticles || 0
   this.maxParticles = opts.maxParticles || 20
   this.minLife = opts.minLife || 3000
   this.maxLife = opts.maxLife || 10000
   this.duration = opts.duration || 10000
-  this.coninuous = opts.continuous || true
+  this.continuous = opts.continuous || true
   this.minDelay = opts.minDelay || 0
   this.maxDelay = opts.maxDelay || 0
 
@@ -182,10 +187,16 @@ function ParticleEmitter(effect, opts) {
 
   this.wind = opts.wind || [0, 0, 0]
   this.minRot = opts.minRot || 720
-  this.MaxRot = opts.maxRot || 720
+  this.maxRot = opts.maxRot || 720
   this.minRotVec = opts.minRotVec || [0, 0, 1]
   this.maxRotVec = opts.maxRotVec || [0, 0, 1]
   this.rotAcc = 0
+
+  this.opts = {}
+  for (var opt in opts) {
+    if (typeof this[opt] !== 'undefined')
+      this.opts[opt] = this[opt]
+  }
 
   this.matrix = mat4.create()
   this.lives = []
@@ -198,12 +209,12 @@ function ParticleEmitter(effect, opts) {
   this.textCoords = [0, 0, 1, 0, 1, 1, 0, 1]
   this.indices = [0, 1, 2, 0, 2, 3]
 
-  for (i = 0; i < this.maxParticles; i++) {
-    this.lives.push(rp(this.minLife, this.maxLife, true))
-    this.lifeElapsed.push(-rp(this.minDelay, this.maxDelay, true))
-    this.starts.push(rp(this.xOffsetMin, this.xOffsetMax), rp(this.yOffsetMin, this.yOffsetMax), rp(this.zOffsetMin, this.zOffsetMax))
-    this.directions.push(rp(this.minDirX, this.maxDirX), rp(this.minDirY, this.maxDirY), rp(this.minDirZ, this.maxDirZ))
-    this.speeds.push(rp(this.minSpeed, this.maxSpeed))
+  for (i = 0; i < opts.maxParticles; i++) {
+    this.lives.push(rp(opts.minLife, opts.maxLife, true))
+    this.lifeElapsed.push(-rp(opts.minDelay, opts.maxDelay, true))
+    this.starts.push(rp(opts.xOffsetMin, opts.xOffsetMax), rp(opts.yOffsetMin, opts.yOffsetMax), rp(opts.zOffsetMin, opts.zOffsetMax))
+    this.directions.push(rp(opts.minDirX, opts.maxDirX), rp(opts.minDirY, this.maxDirY), rp(opts.minDirZ, opts.maxDirZ))
+    this.speeds.push(rp(opts.minSpeed, opts.maxSpeed))
   }
 
   this.vertId = opts.vertId || null
@@ -218,39 +229,44 @@ function ParticleEmitter(effect, opts) {
   var matrix = this.matrix
     , vMatrix = this.effect.vMatrix
     , pMatrix = this.effect.pMatrix
-  window.addEventListener('keydown', function(e) {
-    console.log("model: %o\nview: %o\nprojection: %o", matrix, vMatrix, pMatrix)
-  })
+
 }
 
 ParticleEmitter.prototype = new ParticleEffect
 ParticleEmitter.prototype.constructor = ParticleEmitter
 
-ParticleEmitter.prototype.render = function(delta) {
+ParticleEmitter.prototype.render = function (delta) {
   var gl = this.effect.gl
-          , numParticles = this.maxParticles
-          , text = this.texture
-          , shaderProgram = (this.shaderProgram || effect.shaderProgram)
+    , numParticles = this.maxParticles
+    , text = this.texture
+    , shaderProgram = (this.shaderProgram || effect.shaderProgram)
 
-          , matrix = this.matrix
-          , vMatrix = this.effect.vMatrix
-          , pMatrix = this.effect.pMatrix
+    , matrix = this.matrix
+    , vMatrix = this.effect.vMatrix
+    , pMatrix = this.effect.pMatrix
 
-          , minLife = this.minLife
-          , maxLife = this.maxLife
-          , minDelay = this.minDelay
-          , maxDelay = this.maxDelay
+    , minLife = this.minLife
+    , maxLife = this.maxLife
+    , minDelay = this.minDelay
+    , maxDelay = this.maxDelay
 
-          , lives = this.lives
-          , elapsed = this.lifeElapsed
-          , lifeLen = this.lives.length
+    , minDirX = this.minDirX
+    , maxDirX = this.maxDirX
+    , minDirY = this.minDirY
+    , maxDirY = this.maxDirY
+    , minDirZ = this.minDirZ
+    , maxDirZ = this.maxDirZ
 
-          , starts = this.starts
-          , speeds = this.speeds
-          , directions = this.directions
+    , lives = this.lives
+    , elapsed = this.lifeElapsed
+    , lifeLen = this.lives.length
 
-          , rp = ParticleEmitter.randlerp
-          , m4 = mat4
+    , starts = this.starts
+    , speeds = this.speeds
+    , directions = this.directions
+
+    , rp = ParticleEmitter.randlerp
+    , m4 = mat4
 
   //resurect dead particles with fresh randomized props
   for (var i = 0; i < lifeLen; i++) {
@@ -263,7 +279,7 @@ ParticleEmitter.prototype.render = function(delta) {
       // reset elapsed (negative elapsed creates delay)
       elapsed[i] = (-rp(minDelay, maxDelay))
       // determine a new directional vector
-      directions.splice(i * 3, 3, rp(this.minDirX, this.maxDirX), rp(this.minDirY, this.maxDirY), rp(this.minDirZ, this.maxDirZ))
+      directions.splice(i * 3, 3, rp(minDirX, maxDirX), rp(minDirY, maxDirY), rp(minDirZ, maxDirZ))
     }
   }
 
@@ -293,14 +309,14 @@ ParticleEmitter.prototype.render = function(delta) {
   }
 }
 
-ParticleEmitter.randlerp = function(min, max, rnd) {
+ParticleEmitter.randlerp = function (min, max, rnd) {
   if (rnd)
     return Math.round(Math.random() * (max - min) + min)
   else
     return Math.random() * (max - min) + min
 }
 
-ParticleEmitter.lerp = function(min, max, factor, rnd) {
+ParticleEmitter.lerp = function (min, max, factor, rnd) {
   if (rnd)
     return Math.round(factor * (max - min) + min)
   else
