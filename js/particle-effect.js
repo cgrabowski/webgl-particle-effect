@@ -17,7 +17,7 @@ function ParticleEffect(gl, vMatrix, pMatrix, vertId, fragId, callback, emitters
 
   mat4.identity(this.vMatrix)
   mat4.lookAt(this.vMatrix, [-1, 0, 5], [0, 0, -5], [0, 1, 0])
-  mat4.translate(this.vMatrix, this.vMatrix, [0.0, -1.0, -5.0])
+  mat4.translate(this.vMatrix, this.vMatrix, [0.0, -1.0, -15.0])
   console.log(this)
 
   this.createShaderProgram(gl, vertId, fragId)
@@ -164,10 +164,10 @@ function ParticleEmitter(effect, opts) {
   this.minDelay = opts.minDelay || 0
   this.maxDelay = opts.maxDelay || 0
 
-  this.xOffsetMin = opts.xOffsetMin || -1
-  this.yOffsetMin = opts.yOffsetMin || 0
+  this.xOffsetMin = opts.xOffsetMin || -2
+  this.yOffsetMin = opts.yOffsetMin || -1
   this.zOffsetMin = opts.zOffsetMin || 0
-  this.xOffsetMax = opts.xOffsetMax || 1
+  this.xOffsetMax = opts.xOffsetMax || 2
   this.yOffsetMax = opts.yOffsetMax || 0
   this.zOffsetMax = opts.zOffsetMax || 0
 
