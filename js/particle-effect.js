@@ -160,37 +160,37 @@ function ParticleEmitter (effect, opts, index) {
   this.effect = effect || null
 
   this.name = opts.name || ((index) ? "emitter " + index : "unamed effect")
-  this.minParticles = opts.minParticles || 0
-  this.maxParticles = opts.maxParticles || 20
-  this.minLife = opts.minLife || 3000
-  this.maxLife = opts.maxLife || 10000
-  this.duration = opts.duration || 10000
-  this.continuous = opts.continuous || true
-  this.minDelay = opts.minDelay || 0
-  this.maxDelay = opts.maxDelay || 0
+  this.minParticles = opts.minParticles
+  this.maxParticles = opts.maxParticles
+  this.minLife = opts.minLife
+  this.maxLife = opts.maxLife
+  this.duration = opts.duration
+  this.continuous = opts.continuous
+  this.minDelay = opts.minDelay
+  this.maxDelay = opts.maxDelay
 
-  this.xOffsetMin = opts.xOffsetMin || -2
-  this.yOffsetMin = opts.yOffsetMin || -1
-  this.zOffsetMin = opts.zOffsetMin || 0
-  this.xOffsetMax = opts.xOffsetMax || 2
-  this.yOffsetMax = opts.yOffsetMax || 0
-  this.zOffsetMax = opts.zOffsetMax || 0
+  this.minOffsetX = opts.minOffsetX
+  this.minOffsetY = opts.minOffsetY
+  this.minOffsetZ = opts.minOffsetZ
+  this.maxOffsetX = opts.maxOffsetX
+  this.maxOffsetY = opts.maxOffsetY
+  this.maxOffsetZ = opts.maxOffsetZ
 
-  this.minSpeed = opts.minSpeed || 0.0001
-  this.maxSpeed = opts.maxSpeed || 0.001
-  this.minDirX = opts.minDirX || -0.25
-  this.maxDirX = opts.maxDirX || 0.25
-  this.minDirY = opts.minDirY || 1
-  this.maxDirY = opts.maxDirY || 1
-  this.minDirZ = opts.minDirZ || 0
-  this.maxDirZ = opts.maxDirZ || 0
+  this.minSpeed = opts.minSpeed
+  this.maxSpeed = opts.maxSpeed
+  this.minDirX = opts.minDirX
+  this.maxDirX = opts.maxDirX
+  this.minDirY = opts.minDirY
+  this.maxDirY = opts.maxDirY
+  this.minDirZ = opts.minDirZ
+  this.maxDirZ = opts.maxDirZ
 
-  this.wind = opts.wind || [0, 0, 0]
-  this.minRot = opts.minRot || 720
-  this.maxRot = opts.maxRot || 720
-  this.minRotVec = opts.minRotVec || [0, 0, 1]
-  this.maxRotVec = opts.maxRotVec || [0, 0, 1]
-  this.rotAcc = 0
+  this.wind = opts.wind
+  this.minRot = opts.minRot
+  this.maxRot = opts.maxRot
+  this.minRotVec = opts.minRotVec
+  this.maxRotVec = opts.maxRotVec
+  this.rotAcc = opts.rotAcc
 
   this.opts = {}
   for (var opt in opts) {
@@ -212,7 +212,7 @@ function ParticleEmitter (effect, opts, index) {
   for (i = 0; i < opts.maxParticles; i++) {
     this.lives.push(rp(opts.minLife, opts.maxLife, true))
     this.lifeElapsed.push(-rp(opts.minDelay, opts.maxDelay, true))
-    this.starts.push(rp(opts.xOffsetMin, opts.xOffsetMax), rp(opts.yOffsetMin, opts.yOffsetMax), rp(opts.zOffsetMin, opts.zOffsetMax))
+    this.starts.push(rp(opts.minOffsetX, opts.maxOffsetX), rp(opts.minOffsetY, opts.maxOffsetY), rp(opts.minOffsetZ, opts.maxOffsetZ))
     this.directions.push(rp(opts.minDirX, opts.maxDirX), rp(opts.minDirY, this.maxDirY), rp(opts.minDirZ, opts.maxDirZ))
     this.speeds.push(rp(opts.minSpeed, opts.maxSpeed))
   }
@@ -276,11 +276,16 @@ ParticleEmitter.prototype.render = function (delta) {
     if (elapsed[i] > lives[i]) {
       // new lifespan
       lives[i] = rp(minLife, maxLife, true)
+      // new start point
+      starts.splice(i * 3, 3, rp(this.minOffsetX, this.maxOffsetX), rp(this.minOffsetY, this.maxOffsetY), rp(this.minOffsetZ, this.maxOffsetZ))
       // reset elapsed (negative elapsed creates delay)
       elapsed[i] = (-rp(minDelay, maxDelay))
       // determine a new directional vector
       directions.splice(i * 3, 3, rp(minDirX, maxDirX), rp(minDirY, maxDirY), rp(minDirZ, maxDirZ))
+      
+      speeds[i] = rp(this.minSpeed, this.maxSpeed)
     }
+    
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff)
@@ -299,9 +304,9 @@ ParticleEmitter.prototype.render = function (delta) {
     m4.identity(matrix)
     m4.multiply(matrix, matrix, vMatrix)
     m4.translate(matrix, matrix, [
-      starts[i * 3] + elapsed[i] * speeds[i] * directions[i * 3],
-      starts[i * 3 + 1] + elapsed[i] * speeds[i] * directions[i * 3 + 1],
-      starts[i * 3 + 2] + elapsed[i] * speeds[i] * directions[i * 3 + 2]
+      starts[i * 3] + elapsed[i] * speeds[i] * directions[i * 3] / 100000,
+      starts[i * 3 + 1] + elapsed[i] * speeds[i] * directions[i * 3 + 1] / 100000,
+      starts[i * 3 + 2] + elapsed[i] * speeds[i] * directions[i * 3 + 2] / 100000
     ])
 
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, matrix)
