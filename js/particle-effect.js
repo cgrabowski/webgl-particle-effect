@@ -159,38 +159,13 @@ function ParticleEmitter (effect, opts, index) {
   var rp = ParticleEmitter.randlerp
   this.effect = effect || null
 
-  this.name = opts.name || ((index) ? "emitter " + index : "unamed effect")
-  this.minParticles = opts.minParticles
-  this.maxParticles = opts.maxParticles
-  this.minLife = opts.minLife
-  this.maxLife = opts.maxLife
-  this.duration = opts.duration
-  this.continuous = opts.continuous
-  this.minDelay = opts.minDelay
-  this.maxDelay = opts.maxDelay
-
-  this.minOffsetX = opts.minOffsetX
-  this.minOffsetY = opts.minOffsetY
-  this.minOffsetZ = opts.minOffsetZ
-  this.maxOffsetX = opts.maxOffsetX
-  this.maxOffsetY = opts.maxOffsetY
-  this.maxOffsetZ = opts.maxOffsetZ
-
-  this.minSpeed = opts.minSpeed
-  this.maxSpeed = opts.maxSpeed
-  this.minDirX = opts.minDirX
-  this.maxDirX = opts.maxDirX
-  this.minDirY = opts.minDirY
-  this.maxDirY = opts.maxDirY
-  this.minDirZ = opts.minDirZ
-  this.maxDirZ = opts.maxDirZ
-
-  this.wind = opts.wind
-  this.minRot = opts.minRot
-  this.maxRot = opts.maxRot
-  this.minRotVec = opts.minRotVec
-  this.maxRotVec = opts.maxRotVec
-  this.rotAcc = opts.rotAcc
+  for (var opt in opts) {
+    if (opt === 'name') {
+      this.name = opts.name || ((index) ? "emitter " + index : "unamed effect")
+    } else {
+      this[opt] = opts[opt]
+    }
+  }
 
   this.opts = {}
   for (var opt in opts) {
@@ -282,10 +257,10 @@ ParticleEmitter.prototype.render = function (delta) {
       elapsed[i] = (-rp(minDelay, maxDelay))
       // determine a new directional vector
       directions.splice(i * 3, 3, rp(minDirX, maxDirX), rp(minDirY, maxDirY), rp(minDirZ, maxDirZ))
-      
+
       speeds[i] = rp(this.minSpeed, this.maxSpeed)
     }
-    
+
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff)
@@ -327,4 +302,3 @@ ParticleEmitter.lerp = function (min, max, factor, rnd) {
   else
     return factor * (max - min) + min
 }
-

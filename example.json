@@ -7,22 +7,22 @@
     "minDelay": 0,
     "maxDelay": 0
   }, {
-    "name": "emitter0",
+    "name": "emitter 0",
     "textSource": "igimg/plasma32-1.png"
   }, {
-    "name": "emitter1",
+    "name": "emitter 1",
     "textSource": "igimg/plasma32-2.png"
   }, {
-    "name": "emitter2",
+    "name": "emitter 2",
     "textSource": "igimg/plasma32-3.png"
   }, {
-    "name": "emitter3",
+    "name": "emitter 3",
     "textSource": "igimg/plasma32-12.png"
   }, {
-    "name": "emitter4",
+    "name": "emitter 4",
     "textSource": "igimg/plasma32-22.png"
   }, {
-    "name": "emitter5",
+    "name": "emitter 5",
     "textSource": "igimg/plasma32-32.png"
   }
 ]
