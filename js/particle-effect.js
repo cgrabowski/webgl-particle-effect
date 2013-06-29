@@ -25,11 +25,12 @@ function ParticleEffect (gl, vMatrix, pMatrix, vertId, fragId, callback, default
     var opts = {}
     for (var opt in defaultOpts)
       opts[opt] = defaultOpts[opt]
-    for (var opt in opts) {
-      if (emittersOpts[i + 1][opt])
+    for (opt in opts) {
+      if (emittersOpts[i + 1][opt]) {
         opts[opt] = emittersOpts[i + 1][opt]
-      else if (emittersOpts[0][opt])
+      } else if (emittersOpts[0][opt]) {
         opts[opt] = emittersOpts[0][opt]
+      }
     }
     this.textureSources[i] = emittersOpts[i + 1].textSource || emittersOpts[0].textSource
     this.emitters[i] = new ParticleEmitter(this, opts, i)
@@ -179,6 +180,7 @@ function ParticleEmitter (effect, opts, index) {
   this.starts = []
   this.directions = []
   this.speeds = []
+  this.rotations = []
 
   this.vertices = [-0.1, -0.1, 0.1, 0.1, -0.1, 0.1, 0.1, 0.1, 0.1, -0.1, 0.1, 0.1]
   this.textCoords = [0, 0, 1, 0, 1, 1, 0, 1]
@@ -190,6 +192,7 @@ function ParticleEmitter (effect, opts, index) {
     this.starts.push(rp(opts.minOffsetX, opts.maxOffsetX), rp(opts.minOffsetY, opts.maxOffsetY), rp(opts.minOffsetZ, opts.maxOffsetZ))
     this.directions.push(rp(opts.minDirX, opts.maxDirX), rp(opts.minDirY, this.maxDirY), rp(opts.minDirZ, opts.maxDirZ))
     this.speeds.push(rp(opts.minSpeed, opts.maxSpeed))
+    this.rotations.push(rp(opts.minRot, opts.maxRot))    
   }
 
   this.vertId = opts.vertId || null
@@ -239,6 +242,7 @@ ParticleEmitter.prototype.render = function (delta) {
     , starts = this.starts
     , speeds = this.speeds
     , directions = this.directions
+    , rotations = this.rotations
 
     , rp = ParticleEmitter.randlerp
     , m4 = mat4
@@ -259,6 +263,7 @@ ParticleEmitter.prototype.render = function (delta) {
       directions.splice(i * 3, 3, rp(minDirX, maxDirX), rp(minDirY, maxDirY), rp(minDirZ, maxDirZ))
 
       speeds[i] = rp(this.minSpeed, this.maxSpeed)
+      rotations[i] = rp(this.minRot, this.maxRot)
     }
 
   }
@@ -276,13 +281,14 @@ ParticleEmitter.prototype.render = function (delta) {
     // if elapsed is negative, the particle is delayed
     if (elapsed[i] < 0)
       continue
-    m4.identity(matrix)
+    m4.identity(matrix)    
     m4.multiply(matrix, matrix, vMatrix)
     m4.translate(matrix, matrix, [
       starts[i * 3] + elapsed[i] * speeds[i] * directions[i * 3] / 100000,
       starts[i * 3 + 1] + elapsed[i] * speeds[i] * directions[i * 3 + 1] / 100000,
       starts[i * 3 + 2] + elapsed[i] * speeds[i] * directions[i * 3 + 2] / 100000
     ])
+    m4.rotate(matrix, matrix, rotations[i] * 0.00001 * elapsed[i] % 1000, [0, 0, 1])
 
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, matrix)
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0)
