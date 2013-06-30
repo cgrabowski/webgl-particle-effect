@@ -119,6 +119,31 @@ ParticleEffect.prototype = {
     this.indexBuff = gl.createBuffer()
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuff)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW)
+  },
+  replaceTexture: function (image, index, callback) {
+    var texture = gl.createTexture()
+      // emitters can call this method if index is null or undefined
+      // if index is defined and not null, 
+      // the method looks for an array of emitters named emitters
+      , oldTexture = (index === null || (typeof(index) === 'undefined')) ? this.texture : this.emitters[index].texture
+
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.bindTexture(gl.TEXTURE_2D, null)
+    ParticleEffect.textureFactory.textures[index] = texture
+
+    if (index === null || (typeof(index) === 'undefined'))
+      this.texture = texture
+    else
+      this.emitters[index].texture = texture
+
+    gl.deleteTexture(oldTexture)
+
+    if (callback)
+      callback(texture, index)
   }
 }
 
@@ -130,7 +155,7 @@ ParticleEffect.textureFactory = function (sources, onload) {
   var numLoaded = 0
 
   for (var i = 0; i < sources.length; i++) {
-    ParticleEffect.textureFactory.textures[i] = initTexture(sources[i], function () {
+    ParticleEffect.textureFactory.textures[i] = ParticleEffect.initTexture(sources[i], function () {
       if (++numLoaded === sources.length)
         onload()
     })
@@ -139,7 +164,7 @@ ParticleEffect.textureFactory = function (sources, onload) {
 
 ParticleEffect.textureFactory.textures = []
 
-function initTexture (src, callback) {
+ParticleEffect.initTexture = function (src, callback) {
   var texture = gl.createTexture()
   texture.image = new Image()
   texture.image.onload = function () {
@@ -150,10 +175,15 @@ function initTexture (src, callback) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
     gl.bindTexture(gl.TEXTURE_2D, null)
     if (callback)
-      callback()
+      callback(texture)
   }
   texture.image.src = src
   return texture
+}
+
+ParticleEffect.disposeTextures = function () {
+  for (var i = 0; i < ParticleEffect.textureFactory.textures.length; i++)
+    gl.deleteTexture(ParticleEffect.textureFactory.textures[i])
 }
 
 function ParticleEmitter (effect, opts, index) {
@@ -192,7 +222,7 @@ function ParticleEmitter (effect, opts, index) {
     this.starts.push(rp(opts.minOffsetX, opts.maxOffsetX), rp(opts.minOffsetY, opts.maxOffsetY), rp(opts.minOffsetZ, opts.maxOffsetZ))
     this.directions.push(rp(opts.minDirX, opts.maxDirX), rp(opts.minDirY, this.maxDirY), rp(opts.minDirZ, opts.maxDirZ))
     this.speeds.push(rp(opts.minSpeed, opts.maxSpeed))
-    this.rotations.push(rp(opts.minRot, opts.maxRot))    
+    this.rotations.push(rp(opts.minRot, opts.maxRot))
   }
 
   this.vertId = opts.vertId || null
@@ -281,7 +311,7 @@ ParticleEmitter.prototype.render = function (delta) {
     // if elapsed is negative, the particle is delayed
     if (elapsed[i] < 0)
       continue
-    m4.identity(matrix)    
+    m4.identity(matrix)
     m4.multiply(matrix, matrix, vMatrix)
     m4.translate(matrix, matrix, [
       starts[i * 3] + elapsed[i] * speeds[i] * directions[i * 3] / 100000,
