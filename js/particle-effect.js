@@ -1,42 +1,33 @@
-function ParticleEffect (gl, vMatrix, pMatrix, vertId, fragId, shaderSourceType, callback, defaultOpts, emittersOpts) {
+function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
+  effectOpts = effectOpts || {}
+
   if (arguments.length === 0)
     return
   if (!gl || !gl instanceof WebGLRenderingContext)
     throw new Error('ParticleEffect requires a valid gl context')
 
   this.gl = gl
-  this.vMatrix = vMatrix || mat4.create()
-  this.pMatrix = pMatrix || mat4.perspective(mat4.create(), 0.79, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0)
-  this.mvMatrix = mat4.create()
+  this.vMatrix = effectOpts.vMatrix || mat4.create()
+  this.pMatrix = effectOpts.pMatrix || mat4.perspective(mat4.create(), 0.79, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0)
+  this.vShader = effectOpts.vShader || ParticleEffect.defaultVertexShader()
+  this.fShader = effectOpts.fShader || ParticleEffect.defaultFragmentShader()
+  this.shaderSourceType = effectOpts.shaderSourceType || 'array'
   this.emitters = []
   this.textureSources = []
   this.oldTime = new Date().getTime()
   this.delta = 0
 
-  if (!vMatrix) {
+  if (!effectOpts.vMatrix) {
     mat4.lookAt(this.vMatrix, [-1, 0, 5], [0, 0, -5], [0, 1, 0])
     mat4.translate(this.vMatrix, this.vMatrix, [0.0, -1.0, -15.0])
   }
 
-  if (vertId && fragId) {
-    this.createShaderProgram(gl, vertId, fragId, shaderSourceType)
-  } else {
-    this.createShaderProgram(gl, ParticleEffect.defaultVertexShader(), ParticleEffect.defaultFragmentShader(), 'array')
-  }
+  this.createShaderProgram(gl, this.vShader, this.fShader, this.shaderSourceType)
 
-  for (var i = 0; i < emittersOpts.length /*!*/ - 1 /*!*/; i++) {
-    var opts = {}
-    for (var opt in defaultOpts)
-      opts[opt] = defaultOpts[opt]
-    for (opt in opts) {
-      if (emittersOpts[i + 1][opt]) {
-        opts[opt] = emittersOpts[i + 1][opt]
-      } else if (emittersOpts[0][opt]) {
-        opts[opt] = emittersOpts[0][opt]
-      }
-    }
-    this.textureSources[i] = emittersOpts[i + 1].textSource || emittersOpts[0].textSource
-    this.emitters[i] = new ParticleEmitter(this, opts, i)
+  console.log(emittersOpts)
+  for (var i = 0; i < emittersOpts.length; i++) {
+    this.textureSources[i] = emittersOpts[i].textSource
+    this.emitters[i] = new ParticleEmitter(this, emittersOpts[i], i)
   }
 
   var images = []
@@ -306,10 +297,6 @@ function ParticleEmitter (effect, opts, index) {
     this.shaderProgram = effect.shaderProgram
 
   this.initBuffers()
-
-  var matrix = this.matrix
-    , vMatrix = this.effect.vMatrix
-    , pMatrix = this.effect.pMatrix
 
 }
 

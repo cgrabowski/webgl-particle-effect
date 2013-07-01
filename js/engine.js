@@ -1,4 +1,4 @@
-function engine (canvas, emitterOpts, callback) {
+function engine (canvas, emittersOpts, callback) {
 
   try {
     gl = canvas.getContext('experimental-webgl')
@@ -26,13 +26,13 @@ function engine (canvas, emitterOpts, callback) {
     , effect
   defaultReq.onload = function () {
     handleRes('default', this.responseText)
-    if (emitterOpts)
-      createEffect(defaultOpts, emitterOpts)
+    if (emittersOpts)
+      createEffect(defaultOpts, emittersOpts)
   }
   defaultReq.open('get', 'http://localhost/WebGLParticleEffect/default.json')
   defaultReq.send()
 
-  if (!emitterOpts) {
+  if (!emittersOpts) {
     var exampleReq = new XMLHttpRequest()
       , exampleOpts
 
@@ -54,7 +54,21 @@ function engine (canvas, emitterOpts, callback) {
   }
 
   function createEffect (defaultOpts, exampleOpts) {
-    effect = new ParticleEffect(gl, new Camera(canvas).viewMatrix, null, null, null, null, render, defaultOpts, exampleOpts)
+    var emittersOpts = []
+    for (var i = 0; i < exampleOpts.length /*!*/ - 1 /*!*/; i++) {
+      emittersOpts[i] = {}
+      for (var opt in defaultOpts) {
+        emittersOpts[i][opt] = defaultOpts[opt]
+
+        if (exampleOpts[i + 1][opt]) {
+          emittersOpts[i][opt] = exampleOpts[i + 1][opt]
+        } else if (exampleOpts[0][opt]) {
+          emittersOpts[i][opt] = exampleOpts[0][opt]
+        }
+      }
+    }
+
+    effect = new ParticleEffect(gl, null, emittersOpts, render)
     window.onunload = function (event) {
       effect.textureManager('dispose')()
     }
@@ -157,11 +171,11 @@ function engine (canvas, emitterOpts, callback) {
         mat4.translate(self.viewMatrix, self.viewMatrix, [0, 0, -0.5])
     }, false)
   }
-  
+
   Camera.prototype = {
     constructor: Camera,
     render: function (viewMatrix) {
-      
+
       return viewMatrix
     }
   }
