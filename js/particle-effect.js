@@ -4,8 +4,6 @@ function ParticleEffect (gl, vMatrix, pMatrix, vertId, fragId, shaderSourceType,
   if (!gl || !gl instanceof WebGLRenderingContext)
     throw new Error('ParticleEffect requires a valid gl context')
 
-  var textFac = ParticleEffect.textureFactory
-
   this.gl = gl
   this.vMatrix = vMatrix || mat4.create()
   this.pMatrix = pMatrix || mat4.perspective(mat4.create(), 0.79, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0)
@@ -41,14 +39,29 @@ function ParticleEffect (gl, vMatrix, pMatrix, vertId, fragId, shaderSourceType,
     this.emitters[i] = new ParticleEmitter(this, opts, i)
   }
 
-  textFac(this.textureSources, assignTextures)
+  var images = []
+    , loaded = 0
+    , self = this
 
-  var self = this
-  function assignTextures () {
-    for (i = 0; i < textFac.textures.length; i++)
-      self.emitters[i].texture = textFac.textures[i]
+  for (var i = 0; i < this.textureSources.length; i++) {
+    images[i] = new Image()
+    images[i].onload = function () {
+      if (++loaded === self.textureSources.length) {
+        onImagesLoaded()
+      }
+    }
+    images[i].src = this.textureSources[i]
+  }
+
+  function onImagesLoaded () {
+    self.textureManager = ParticleEffect.textureManager(gl)
+    self.textureManager('add')(images)
+    for (var i = 0; i < self.emitters.length; i++) {
+      self.emitters[i].bindTexture = self.textureManager('bind')(i)
+    }
     callback()
   }
+
 }
 
 ParticleEffect.prototype = {
@@ -143,84 +156,83 @@ ParticleEffect.prototype = {
       return null
     }
     return shader
-  },
-  initBuffers: function () {
-    this.vertBuff = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW)
+  }
+}
 
-    this.textCoordBuff = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.textCoordBuff)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.textCoords), gl.STATIC_DRAW)
+ParticleEffect.textureManager = function (gl) {
+  var textures = []
 
-    this.indexBuff = gl.createBuffer()
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuff)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW)
-  },
-  replaceTexture: function (image, index, callback) {
+  if (!gl || !gl instanceof WebGLRenderingContext)
+    throw new Error('invalid gl instance')
+
+  return function (method) {
+
+    switch (method) {
+
+      case('add'):
+        return function (images) {
+          if (!typeof(images) === 'array') {
+            textures.push(createTexture(images))
+            return textures.length - 1
+          } else {
+            var firstHandle = textures.length
+            for (var i = 0; i < images.length; i++) {
+              textures.push(createTexture(images[i]))
+            }
+            return firstHandle
+          }
+        }
+        break;
+
+      case('bind'):
+        return function (index) {
+          return function () {
+            gl.bindTexture(gl.TEXTURE_2D, textures[index])
+          }
+        }
+        break;
+
+      case('remove'):
+        return function (index) {
+          gl.deleteTexture(textures[index])
+          textures.splice(index, 1)
+        }
+        break;
+
+      case('replace'):
+        return function (image, index) {
+          var oldTexture = textures[index]
+          textures[index] = createTexture(image)
+          gl.deleteTexture(oldTexture)
+          return textures[index]
+        }
+        break;
+
+      case ('dispose'):
+        return function () {
+          for (var i = 0; i < textures.length; i++) {
+            gl.deleteTexture(textures[i])
+          }
+          textures = null
+        }
+        break;
+
+      default:
+        throw new Error('textureFactory\'s argument must be a method name: init, add, get, remove, replace, or dispose')
+    }
+
+  }
+
+  function createTexture (image) {
     var texture = gl.createTexture()
-      // emitters can call this method if index is null or undefined
-      // if index is defined and not null, 
-      // the method looks for an array of emitters named emitters
-      , oldTexture = (index === null || (typeof(index) === 'undefined')) ? this.texture : this.emitters[index].texture
-
     gl.bindTexture(gl.TEXTURE_2D, texture)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
     gl.bindTexture(gl.TEXTURE_2D, null)
-    ParticleEffect.textureFactory.textures[index] = texture
-
-    if (index === null || (typeof(index) === 'undefined'))
-      this.texture = texture
-    else
-      this.emitters[index].texture = texture
-
-    gl.deleteTexture(oldTexture)
-
-    if (callback)
-      callback(texture, index)
+    return texture
   }
-}
-
-
-ParticleEffect.textureFactory = function (sources, callback) {
-  if (typeof(sources) === 'string')
-    sources = [sources]
-
-  var numLoaded = 0
-
-  for (var i = 0; i < sources.length; i++) {
-    ParticleEffect.textureFactory.textures[i] = ParticleEffect.initTexture(sources[i], function () {
-      if (++numLoaded === sources.length)
-        callback()
-    })
-  }
-}
-
-ParticleEffect.textureFactory.textures = []
-
-ParticleEffect.initTexture = function (src, callback) {
-  var texture = gl.createTexture()
-  texture.image = new Image()
-  texture.image.onload = function () {
-    gl.bindTexture(gl.TEXTURE_2D, texture)
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-    gl.bindTexture(gl.TEXTURE_2D, null)
-    if (callback)
-      callback(texture)
-  }
-  texture.image.src = src
-  return texture
-}
-
-ParticleEffect.disposeTextures = function () {
-  for (var i = 0; i < ParticleEffect.textureFactory.textures.length; i++)
-    gl.deleteTexture(ParticleEffect.textureFactory.textures[i])
 }
 
 ParticleEffect.defaultVertexShader = function () {
@@ -342,11 +354,11 @@ ParticleEmitter.prototype.render = function (delta) {
 
   //resurect dead particles with fresh randomized props
   for (var i = 0; i < lifeLen; i++) {
-    // particle gets older
+// particle gets older
     elapsed[i] += delta
     // if particle's life is elapsed, it needs resurected
     if (elapsed[i] > lives[i]) {
-      // new lifespan
+// new lifespan
       lives[i] = rp(minLife, maxLife, true)
       // new start point
       starts.splice(i * 3, 3, rp(this.minOffsetX, this.maxOffsetX), rp(this.minOffsetY, this.maxOffsetY), rp(this.minOffsetZ, this.maxOffsetZ))
@@ -368,10 +380,10 @@ ParticleEmitter.prototype.render = function (delta) {
   gl.uniform1i(shaderProgram.samplerUniform, 0)
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuff)
   gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix)
-  gl.bindTexture(gl.TEXTURE_2D, this.texture)
+  this.bindTexture()
 
   for (i = 0; i < numParticles; i++) {
-    // if elapsed is negative, the particle is delayed
+// if elapsed is negative, the particle is delayed
     if (elapsed[i] < 0)
       continue
     m4.identity(matrix)
@@ -386,6 +398,20 @@ ParticleEmitter.prototype.render = function (delta) {
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, matrix)
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0)
   }
+}
+
+ParticleEmitter.prototype.initBuffers = function () {
+  this.vertBuff = gl.createBuffer()
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW)
+
+  this.textCoordBuff = gl.createBuffer()
+  gl.bindBuffer(gl.ARRAY_BUFFER, this.textCoordBuff)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.textCoords), gl.STATIC_DRAW)
+
+  this.indexBuff = gl.createBuffer()
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuff)
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW)
 }
 
 ParticleEmitter.randlerp = function (min, max, rnd) {
