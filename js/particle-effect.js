@@ -105,8 +105,7 @@ ParticleEffect.prototype = {
     gl.enableVertexAttribArray(prog.vertexPositionAttribute)
     prog.textureCoordAttribute = gl.getAttribLocation(prog, "aTextureCoord")
     gl.enableVertexAttribArray(prog.textureCoordAttribute)
-    prog.pMatrixUniform = gl.getUniformLocation(prog, "uPMatrix")
-    prog.mvMatrixUniform = gl.getUniformLocation(prog, "uMVMatrix")
+    prog.mvpMatrixUniform = gl.getUniformLocation(prog, "uMVPMatrix")
     prog.samplerUniform = gl.getUniformLocation(prog, "uSampler")
   },
   getShaderFromHTML: function (gl, id) {
@@ -239,13 +238,12 @@ ParticleEffect.defaultVertexShader = function () {
   var vArray = []
   vArray[0] = 'attribute vec3 aVertexPosition;'
   vArray[1] = 'attribute vec2 aTextureCoord;'
-  vArray[2] = 'uniform mat4 uMVMatrix;'
-  vArray[3] = 'uniform mat4 uPMatrix;'
-  vArray[4] = 'varying vec2 vTextureCoord;'
-  vArray[5] = 'void main(void) {'
-  vArray[6] = 'gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);'
-  vArray[7] = 'vTextureCoord = aTextureCoord;'
-  vArray[8] = '}'
+  vArray[2] = 'uniform mat4 uMVPMatrix;'
+  vArray[3] = 'varying vec2 vTextureCoord;'
+  vArray[4] = 'void main(void) {'
+  vArray[5] = 'gl_Position = uMVPMatrix * vec4(aVertexPosition, 1.0);'
+  vArray[6] = 'vTextureCoord = aTextureCoord;'
+  vArray[7] = '}'
   return vArray
 }
 
@@ -379,7 +377,6 @@ ParticleEmitter.prototype.render = function (delta) {
   gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0)
   gl.uniform1i(shaderProgram.samplerUniform, 0)
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuff)
-  gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix)
   this.bindTexture()
 
   for (i = 0; i < numParticles; i++) {
@@ -394,8 +391,9 @@ ParticleEmitter.prototype.render = function (delta) {
     ])
     m4.rotate(matrix, matrix, rotations[i] * 0.00001 * elapsed[i] % 1000, [0, 0, 1])
 
-    m4.multiply(matrix, matrix, vMatrix)
-    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, matrix)
+    m4.multiply(matrix, vMatrix, matrix)
+    m4.multiply(matrix, pMatrix, matrix)
+    gl.uniformMatrix4fv(shaderProgram.mvpMatrixUniform, false, matrix)
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0)
   }
 }

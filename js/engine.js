@@ -1,4 +1,4 @@
-function engine (canvas, opts, callback) {
+function engine (canvas, emitterOpts, callback) {
 
   try {
     gl = canvas.getContext('experimental-webgl')
@@ -15,27 +15,31 @@ function engine (canvas, opts, callback) {
   gl.disable(gl.DEPTH_TEST)
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight)
 
+  /*
+   * If emitterOpts are passed to engine, they are used.
+   * If not, example opts are loaded from example.json.
+   * default.json is allways loaded as a fallback for opts || exampleOpts
+   */
+
   var defaultReq = new XMLHttpRequest()
     , defaultOpts
+    , effect
   defaultReq.onload = function () {
     handleRes('default', this.responseText)
-    if (opts)
-      createEffect(defaultOpts, opts)
+    if (emitterOpts)
+      createEffect(defaultOpts, emitterOpts)
   }
   defaultReq.open('get', 'http://localhost/WebGLParticleEffect/default.json')
   defaultReq.send()
 
-  if (!opts) {
+  if (!emitterOpts) {
     var exampleReq = new XMLHttpRequest()
-      , defaultOpts
       , exampleOpts
-      , effect
 
     exampleReq.onload = function () {
       handleRes('example', this.responseText)
     }
     exampleReq.open('get', 'http://localhost/WebGLParticleEffect/example.json')
-
     exampleReq.send()
   }
 
@@ -51,6 +55,9 @@ function engine (canvas, opts, callback) {
 
   function createEffect (defaultOpts, exampleOpts) {
     effect = new ParticleEffect(gl, new Camera(canvas).viewMatrix, null, null, null, null, render, defaultOpts, exampleOpts)
+    window.onunload = function (event) {
+      effect.textureManager('dispose')()
+    }
     callback(effect)
   }
 
