@@ -1,4 +1,6 @@
 function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
+  var self = this
+
   effectOpts = effectOpts || {}
 
   if (arguments.length === 0)
@@ -16,15 +18,21 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
   this.textureSources = []
   this.oldTime = new Date().getTime()
   this.delta = 0
+  this.textureManager = ParticleEffect.textureManager(gl)
+  this.shaderManager = ParticleEffect.shaderManager(gl)
+  this.programHandle = this.shaderManager('createProgram')(this.vShader, this.fShader, this.shaderSourceType)
+  this.shaderProgram = this.shaderManager('useProgram')(this.programHandle)
 
   if (!effectOpts.vMatrix) {
     mat4.lookAt(this.vMatrix, [-1, 0, 5], [0, 0, -5], [0, 1, 0])
     mat4.translate(this.vMatrix, this.vMatrix, [0.0, -1.0, -15.0])
   }
 
-  this.createShaderProgram(gl, this.vShader, this.fShader, this.shaderSourceType)
+  window.addEventListener('unload', function (event) {
+    self.textureManager('dispose')()
+    self.shaderManager('dispose')()
+  })
 
-  console.log(emittersOpts)
   for (var i = 0; i < emittersOpts.length; i++) {
     this.textureSources[i] = emittersOpts[i].textSource
     this.emitters[i] = new ParticleEmitter(this, emittersOpts[i], i)
@@ -32,7 +40,6 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
 
   var images = []
     , loaded = 0
-    , self = this
 
   for (var i = 0; i < this.textureSources.length; i++) {
     images[i] = new Image()
@@ -45,7 +52,6 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
   }
 
   function onImagesLoaded () {
-    self.textureManager = ParticleEffect.textureManager(gl)
     self.textureManager('add')(images)
     for (var i = 0; i < self.emitters.length; i++) {
       self.emitters[i].bindTexture = self.textureManager('bind')(i)
@@ -64,42 +70,81 @@ ParticleEffect.prototype = {
     var ln = this.emitters.length
     for (var i = 0; i < ln; i++)
       this.emitters[i].render(this.delta)
-  },
-  createShaderProgram: function (gl, vertex, fragment, sourceType) {
-    var fragmentShader
-      , vertexShader
-      , prog = this.shaderProgram = gl.createProgram()
+  }
+}
 
-    sourceType = sourceType.toLowerCase()
-    if (sourceType === 'html') {
-      vertexShader = this.getShaderFromHTML(gl, vertex)
-      fragmentShader = this.getShaderFromHTML(gl, fragment)
-    } else if (sourceType === 'string') {
-      vertexShader = this.getshaderFromString(gl, vertex, 'vertex')
-      fragmentShader = this.getShaderFromString(gl, fragment, 'fragment')
-    } else if (sourceType === 'array') {
-      vertexShader = this.getShaderFromArray(gl, vertex, 'vertex')
-      fragmentShader = this.getShaderFromArray(gl, fragment, 'fragment')
-    } else {
-      throw new Error('sourceType parameter must be "html", "string", or "array"')
+ParticleEffect.shaderManager = function (gl) {
+  var programs = []
+    , vertexShaders = []
+    , fragmentShaders = []
+    , activeProgramHandle
+
+  return function (method) {
+
+    switch (method) {
+      case('createProgram'):
+        return function (vertex, fragment, sourceType) {
+          var fragmentShader
+            , vertexShader
+            , prog = gl.createProgram()
+
+          sourceType = sourceType.toLowerCase()
+          if (sourceType === 'html') {
+            vertexShader = getShaderFromHTML(gl, vertex)
+            fragmentShader = getShaderFromHTML(gl, fragment)
+          } else if (sourceType === 'string') {
+            vertexShader = getshaderFromString(gl, vertex, 'vertex')
+            fragmentShader = getShaderFromString(gl, fragment, 'fragment')
+          } else if (sourceType === 'array') {
+            vertexShader = getShaderFromArray(gl, vertex, 'vertex')
+            fragmentShader = getShaderFromArray(gl, fragment, 'fragment')
+          } else {
+            throw new Error('sourceType parameter must be "html", "string", or "array"')
+          }
+
+          gl.attachShader(prog, vertexShader)
+          gl.attachShader(prog, fragmentShader)
+          gl.linkProgram(prog)
+
+          if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+            throw new Error("Could not initialize shaders")
+
+          gl.useProgram(prog)
+          prog.vertexPositionAttribute = gl.getAttribLocation(prog, "aVertexPosition")
+          gl.enableVertexAttribArray(prog.vertexPositionAttribute)
+          prog.textureCoordAttribute = gl.getAttribLocation(prog, "aTextureCoord")
+          gl.enableVertexAttribArray(prog.textureCoordAttribute)
+          prog.mvpMatrixUniform = gl.getUniformLocation(prog, "uMVPMatrix")
+          prog.samplerUniform = gl.getUniformLocation(prog, "uSampler")
+          programs.push(prog)
+          vertexShaders.push(vertexShader)
+          fragmentShaders.push(fragmentShader)
+          return programs.length - 1
+        }
+        break;
+
+      case('useProgram'):
+        return function (index) {
+          gl.useProgram(programs[index])
+          return programs[index]
+        }
+
+      case('dispose'):
+        return function () {
+          for (var i = 0; i < programs.length; i++) {
+            gl.deleteProgram(programs[i])
+          }
+          vertexShaders = fragmentShaders = programs = null
+
+        }
+        break;
+
+      default:
+        throw new Error('shaderManager\'s argument must be a method name: createProgram or dispose')
     }
+  }
 
-    gl.attachShader(prog, vertexShader)
-    gl.attachShader(prog, fragmentShader)
-    gl.linkProgram(prog)
-
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
-      throw new Error("Could not initialize shaders")
-
-    gl.useProgram(prog)
-    prog.vertexPositionAttribute = gl.getAttribLocation(prog, "aVertexPosition")
-    gl.enableVertexAttribArray(prog.vertexPositionAttribute)
-    prog.textureCoordAttribute = gl.getAttribLocation(prog, "aTextureCoord")
-    gl.enableVertexAttribArray(prog.textureCoordAttribute)
-    prog.mvpMatrixUniform = gl.getUniformLocation(prog, "uMVPMatrix")
-    prog.samplerUniform = gl.getUniformLocation(prog, "uSampler")
-  },
-  getShaderFromHTML: function (gl, id) {
+  function getShaderFromHTML (gl, id) {
     var str = ""
       , shaderScript = document.getElementById(id)
       , shader
@@ -123,13 +168,15 @@ ParticleEffect.prototype = {
       throw new Error('Shader mime type must be "x-shader/x-vertex" or "x-shader/x-fragment"')
       return null
     }
-    return this.getShaderFromString(gl, str, type)
-  },
-  getShaderFromArray: function (gl, array, type) {
+    return getShaderFromString(str, type)
+  }
+
+  function getShaderFromArray (gl, array, type) {
     var str = array.join('')
-    return this.getShaderFromString(gl, str, type)
-  },
-  getShaderFromString: function (gl, str, type) {
+    return getShaderFromString(str, type)
+  }
+
+  function getShaderFromString (str, type) {
     var shader
     if (type === 'vertex') {
       shader = gl.createShader(gl.VERTEX_SHADER)
@@ -146,82 +193,6 @@ ParticleEffect.prototype = {
       return null
     }
     return shader
-  }
-}
-
-ParticleEffect.textureManager = function (gl) {
-  var textures = []
-
-  if (!gl || !gl instanceof WebGLRenderingContext)
-    throw new Error('invalid gl instance')
-
-  return function (method) {
-
-    switch (method) {
-
-      case('add'):
-        return function (images) {
-          if (!typeof(images) === 'array') {
-            textures.push(createTexture(images))
-            return textures.length - 1
-          } else {
-            var firstHandle = textures.length
-            for (var i = 0; i < images.length; i++) {
-              textures.push(createTexture(images[i]))
-            }
-            return firstHandle
-          }
-        }
-        break;
-
-      case('bind'):
-        return function (index) {
-          return function () {
-            gl.bindTexture(gl.TEXTURE_2D, textures[index])
-          }
-        }
-        break;
-
-      case('remove'):
-        return function (index) {
-          gl.deleteTexture(textures[index])
-          textures.splice(index, 1)
-        }
-        break;
-
-      case('replace'):
-        return function (image, index) {
-          var oldTexture = textures[index]
-          textures[index] = createTexture(image)
-          gl.deleteTexture(oldTexture)
-          return textures[index]
-        }
-        break;
-
-      case ('dispose'):
-        return function () {
-          for (var i = 0; i < textures.length; i++) {
-            gl.deleteTexture(textures[i])
-          }
-          textures = null
-        }
-        break;
-
-      default:
-        throw new Error('textureFactory\'s argument must be a method name: init, add, get, remove, replace, or dispose')
-    }
-
-  }
-
-  function createTexture (image) {
-    var texture = gl.createTexture()
-    gl.bindTexture(gl.TEXTURE_2D, texture)
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-    gl.bindTexture(gl.TEXTURE_2D, null)
-    return texture
   }
 }
 
@@ -249,6 +220,78 @@ ParticleEffect.defaultFragmentShader = function () {
   fArray[6] = '}'
   return fArray
 }
+
+ParticleEffect.textureManager = function (gl) {
+  var textures = []
+
+  if (!gl || !gl instanceof WebGLRenderingContext)
+    throw new Error('invalid gl instance')
+
+  return function (method) {
+
+    switch (method) {
+
+      case('add'):
+        return function (images) {
+          if (!typeof(images) === 'array') {
+            textures.push(createTexture(images))
+            return textures.length - 1
+          } else {
+            var firstHandle = textures.length
+            for (var i = 0; i < images.length; i++) {
+              textures.push(createTexture(images[i]))
+            }
+            return firstHandle
+          }
+        }
+        break;
+      case('bind'):
+        return function (index) {
+          return function () {
+            gl.bindTexture(gl.TEXTURE_2D, textures[index])
+          }
+        }
+        break;
+      case('remove'):
+        return function (index) {
+          gl.deleteTexture(textures[index])
+          textures.splice(index, 1)
+        }
+        break;
+      case('replace'):
+        return function (image, index) {
+          var oldTexture = textures[index]
+          textures[index] = createTexture(image)
+          gl.deleteTexture(oldTexture)
+          return textures[index]
+        }
+        break;
+      case ('dispose'):
+        return function () {
+          for (var i = 0; i < textures.length; i++) {
+            gl.deleteTexture(textures[i])
+          }
+          textures = null
+        }
+        break;
+      default:
+        throw new Error('textureManager\'s argument must be a method name: init, add, get, remove, replace, or dispose')
+    }
+
+  }
+
+  function createTexture (image) {
+    var texture = gl.createTexture()
+    gl.bindTexture(gl.TEXTURE_2D, texture)
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.bindTexture(gl.TEXTURE_2D, null)
+    return texture
+  }
+}
+
 
 function ParticleEmitter (effect, opts, index) {
   var rp = ParticleEmitter.randlerp
@@ -304,14 +347,16 @@ ParticleEmitter.prototype = new ParticleEffect
 ParticleEmitter.prototype.constructor = ParticleEmitter
 
 ParticleEmitter.prototype.render = function (delta) {
-  var gl = this.effect.gl
+  var effect = this.effect
+    , gl = effect.gl
     , numParticles = this.maxParticles
     , text = this.texture
-    , shaderProgram = (this.shaderProgram || effect.shaderProgram)
+    , shaderProgram = effect.shaderProgram
+    , mvpMatrixUniform = shaderProgram.mvpMatrixUniform
 
     , matrix = this.matrix
-    , vMatrix = this.effect.vMatrix
-    , pMatrix = this.effect.pMatrix
+    , vMatrix = effect.vMatrix
+    , pMatrix = effect.pMatrix
 
     , minLife = this.minLife
     , maxLife = this.maxLife
@@ -380,7 +425,7 @@ ParticleEmitter.prototype.render = function (delta) {
 
     m4.multiply(matrix, vMatrix, matrix)
     m4.multiply(matrix, pMatrix, matrix)
-    gl.uniformMatrix4fv(shaderProgram.mvpMatrixUniform, false, matrix)
+    gl.uniformMatrix4fv(mvpMatrixUniform, false, matrix)
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0)
   }
 }

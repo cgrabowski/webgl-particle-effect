@@ -69,9 +69,6 @@ function engine (canvas, emittersOpts, callback) {
     }
 
     effect = new ParticleEffect(gl, null, emittersOpts, render)
-    window.onunload = function (event) {
-      effect.textureManager('dispose')()
-    }
     callback(effect)
   }
 
