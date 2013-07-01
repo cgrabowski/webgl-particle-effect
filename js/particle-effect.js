@@ -1,4 +1,4 @@
-function ParticleEffect (gl, vMatrix, pMatrix, vertId, fragId, callback, defaultOpts, emittersOpts) {
+function ParticleEffect (gl, vMatrix, pMatrix, vertId, fragId, shaderSourceType, callback, defaultOpts, emittersOpts) {
   if (arguments.length === 0)
     return
   if (!gl || !gl instanceof WebGLRenderingContext)
@@ -15,11 +15,16 @@ function ParticleEffect (gl, vMatrix, pMatrix, vertId, fragId, callback, default
   this.oldTime = new Date().getTime()
   this.delta = 0
 
-  mat4.identity(this.vMatrix)
-  mat4.lookAt(this.vMatrix, [-1, 0, 5], [0, 0, -5], [0, 1, 0])
-  mat4.translate(this.vMatrix, this.vMatrix, [0.0, -1.0, -15.0])
+  if (!vMatrix) {
+    mat4.lookAt(this.vMatrix, [-1, 0, 5], [0, 0, -5], [0, 1, 0])
+    mat4.translate(this.vMatrix, this.vMatrix, [0.0, -1.0, -15.0])
+  }
 
-  this.createShaderProgram(gl, vertId, fragId)
+  if (vertId && fragId) {
+    this.createShaderProgram(gl, vertId, fragId, shaderSourceType)
+  } else {
+    this.createShaderProgram(gl, ParticleEffect.defaultVertexShader(), ParticleEffect.defaultFragmentShader(), 'array')
+  }
 
   for (var i = 0; i < emittersOpts.length /*!*/ - 1 /*!*/; i++) {
     var opts = {}
@@ -56,10 +61,46 @@ ParticleEffect.prototype = {
     for (var i = 0; i < ln; i++)
       this.emitters[i].render(this.delta)
   },
-  getShader: function (gl, id) {
+  createShaderProgram: function (gl, vertex, fragment, sourceType) {
+    var fragmentShader
+      , vertexShader
+      , prog = this.shaderProgram = gl.createProgram()
+
+    sourceType = sourceType.toLowerCase()
+    if (sourceType === 'html') {
+      vertexShader = this.getShaderFromHTML(gl, vertex)
+      fragmentShader = this.getShaderFromHTML(gl, fragment)
+    } else if (sourceType === 'string') {
+      vertexShader = this.getshaderFromString(gl, vertex, 'vertex')
+      fragmentShader = this.getShaderFromString(gl, fragment, 'fragment')
+    } else if (sourceType === 'array') {
+      vertexShader = this.getShaderFromArray(gl, vertex, 'vertex')
+      fragmentShader = this.getShaderFromArray(gl, fragment, 'fragment')
+    } else {
+      throw new Error('sourceType parameter must be "html", "string", or "array"')
+    }
+
+    gl.attachShader(prog, vertexShader)
+    gl.attachShader(prog, fragmentShader)
+    gl.linkProgram(prog)
+
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
+      throw new Error("Could not initialize shaders")
+
+    gl.useProgram(prog)
+    prog.vertexPositionAttribute = gl.getAttribLocation(prog, "aVertexPosition")
+    gl.enableVertexAttribArray(prog.vertexPositionAttribute)
+    prog.textureCoordAttribute = gl.getAttribLocation(prog, "aTextureCoord")
+    gl.enableVertexAttribArray(prog.textureCoordAttribute)
+    prog.pMatrixUniform = gl.getUniformLocation(prog, "uPMatrix")
+    prog.mvMatrixUniform = gl.getUniformLocation(prog, "uMVMatrix")
+    prog.samplerUniform = gl.getUniformLocation(prog, "uSampler")
+  },
+  getShaderFromHTML: function (gl, id) {
     var str = ""
       , shaderScript = document.getElementById(id)
       , shader
+      , type
 
     if (!shaderScript)
       return null
@@ -71,41 +112,37 @@ ParticleEffect.prototype = {
       k = k.nextSibling
     }
 
-    if (shaderScript.type === "x-shader/x-fragment")
-      shader = gl.createShader(gl.FRAGMENT_SHADER)
-    else if (shaderScript.type === "x-shader/x-vertex")
-      shader = gl.createShader(gl.VERTEX_SHADER)
-    else
+    if (shaderScript.type === "x-shader/x-vertex") {
+      type = 'vertex'
+    } else if (shaderScript.type === "x-shader/x-fragment") {
+      type = 'fragment'
+    } else {
+      throw new Error('Shader mime type must be "x-shader/x-vertex" or "x-shader/x-fragment"')
       return null
-
+    }
+    return this.getShaderFromString(gl, str, type)
+  },
+  getShaderFromArray: function (gl, array, type) {
+    var str = array.join('')
+    return this.getShaderFromString(gl, str, type)
+  },
+  getShaderFromString: function (gl, str, type) {
+    var shader
+    if (type === 'vertex') {
+      shader = gl.createShader(gl.VERTEX_SHADER)
+    } else if (type === 'fragment') {
+      shader = gl.createShader(gl.FRAGMENT_SHADER)
+    } else {
+      throw new Error('shader type parameter must be "vertex" or "fragment"')
+      return null
+    }
     gl.shaderSource(shader, str)
     gl.compileShader(shader)
-
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      throw new Error('Error compiling ' + type + ' shader')
       return null
     }
     return shader
-  },
-  createShaderProgram: function (gl, vertId, fragId) {
-    var fragmentShader = this.getShader(gl, fragId)
-      , vertexShader = this.getShader(gl, vertId)
-      , prog = this.shaderProgram = gl.createProgram()
-
-    gl.attachShader(prog, vertexShader)
-    gl.attachShader(prog, fragmentShader)
-    gl.linkProgram(prog)
-
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS))
-      throw new Error("Could not initialise shaders")
-
-    gl.useProgram(prog)
-    prog.vertexPositionAttribute = gl.getAttribLocation(prog, "aVertexPosition")
-    gl.enableVertexAttribArray(prog.vertexPositionAttribute)
-    prog.textureCoordAttribute = gl.getAttribLocation(prog, "aTextureCoord")
-    gl.enableVertexAttribArray(prog.textureCoordAttribute)
-    prog.pMatrixUniform = gl.getUniformLocation(prog, "uPMatrix")
-    prog.mvMatrixUniform = gl.getUniformLocation(prog, "uMVMatrix")
-    prog.samplerUniform = gl.getUniformLocation(prog, "uSampler")
   },
   initBuffers: function () {
     this.vertBuff = gl.createBuffer()
@@ -148,7 +185,7 @@ ParticleEffect.prototype = {
 }
 
 
-ParticleEffect.textureFactory = function (sources, onload) {
+ParticleEffect.textureFactory = function (sources, callback) {
   if (typeof(sources) === 'string')
     sources = [sources]
 
@@ -157,7 +194,7 @@ ParticleEffect.textureFactory = function (sources, onload) {
   for (var i = 0; i < sources.length; i++) {
     ParticleEffect.textureFactory.textures[i] = ParticleEffect.initTexture(sources[i], function () {
       if (++numLoaded === sources.length)
-        onload()
+        callback()
     })
   }
 }
@@ -184,6 +221,32 @@ ParticleEffect.initTexture = function (src, callback) {
 ParticleEffect.disposeTextures = function () {
   for (var i = 0; i < ParticleEffect.textureFactory.textures.length; i++)
     gl.deleteTexture(ParticleEffect.textureFactory.textures[i])
+}
+
+ParticleEffect.defaultVertexShader = function () {
+  var vArray = []
+  vArray[0] = 'attribute vec3 aVertexPosition;'
+  vArray[1] = 'attribute vec2 aTextureCoord;'
+  vArray[2] = 'uniform mat4 uMVMatrix;'
+  vArray[3] = 'uniform mat4 uPMatrix;'
+  vArray[4] = 'varying vec2 vTextureCoord;'
+  vArray[5] = 'void main(void) {'
+  vArray[6] = 'gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);'
+  vArray[7] = 'vTextureCoord = aTextureCoord;'
+  vArray[8] = '}'
+  return vArray
+}
+
+ParticleEffect.defaultFragmentShader = function () {
+  var fArray = []
+  fArray[0] = 'precision mediump float;'
+  fArray[1] = 'varying vec2 vTextureCoord;'
+  fArray[2] = 'uniform sampler2D uSampler;'
+  fArray[3] = 'void main(void) {'
+  fArray[4] = 'vec4 tmp = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));'
+  fArray[5] = 'gl_FragColor = tmp;'
+  fArray[6] = '}'
+  return fArray
 }
 
 function ParticleEmitter (effect, opts, index) {
@@ -312,7 +375,6 @@ ParticleEmitter.prototype.render = function (delta) {
     if (elapsed[i] < 0)
       continue
     m4.identity(matrix)
-    m4.multiply(matrix, matrix, vMatrix)
     m4.translate(matrix, matrix, [
       starts[i * 3] + elapsed[i] * speeds[i] * directions[i * 3] / 100000,
       starts[i * 3 + 1] + elapsed[i] * speeds[i] * directions[i * 3 + 1] / 100000,
@@ -320,6 +382,7 @@ ParticleEmitter.prototype.render = function (delta) {
     ])
     m4.rotate(matrix, matrix, rotations[i] * 0.00001 * elapsed[i] % 1000, [0, 0, 1])
 
+    m4.multiply(matrix, matrix, vMatrix)
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, matrix)
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0)
   }
