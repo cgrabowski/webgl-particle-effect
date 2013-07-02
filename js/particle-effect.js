@@ -1,12 +1,13 @@
 function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
+  if (arguments.length === 0)
+    return
+
+  if (!gl || !gl instanceof WebGLRenderingContext)
+    throw new Error('ParticleEffect requires a valid gl context')
+
   var self = this
 
   effectOpts = effectOpts || {}
-
-  if (arguments.length === 0)
-    return
-  if (!gl || !gl instanceof WebGLRenderingContext)
-    throw new Error('ParticleEffect requires a valid gl context')
 
   this.gl = gl
   this.vMatrix = effectOpts.vMatrix || mat4.create()
@@ -33,37 +34,95 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
     self.shaderManager('dispose')()
   })
 
-  for (var i = 0; i < emittersOpts.length; i++) {
-    this.textureSources[i] = emittersOpts[i].textSource
-    this.emitters[i] = new ParticleEmitter(this, emittersOpts[i], i)
+  /*
+   * If emitterOpts are passed to engine, they are used.
+   * If not, example opts are loaded from example.json.
+   * default.json is allways loaded as a fallback for opts || exampleOpts
+   */
+
+  var defaultReq = new XMLHttpRequest()
+    , defaultOpts
+    , effect
+  defaultReq.onload = function () {
+    handleRes('default', this.responseText)
+    if (emittersOpts)
+      createEffect(defaultOpts, emittersOpts)
+  }
+  defaultReq.open('get', 'http://localhost/WebGLParticleEffect/default.json')
+  defaultReq.send()
+
+  if (!emittersOpts) {
+    var exampleReq = new XMLHttpRequest()
+      , exampleOpts
+
+    exampleReq.onload = function () {
+      handleRes('example', this.responseText)
+    }
+    exampleReq.open('get', 'http://localhost/WebGLParticleEffect/example.json')
+    exampleReq.send()
   }
 
-  var images = []
-    , loaded = 0
+  function handleRes (name, resText) {
+    if (name === 'default')
+      defaultOpts = JSON.parse(resText)
+    else if (name === 'example')
+      exampleOpts = JSON.parse(resText)
 
-  for (var i = 0; i < this.textureSources.length; i++) {
-    images[i] = new Image()
-    images[i].onload = function () {
-      if (++loaded === self.textureSources.length) {
-        onImagesLoaded()
+    if (defaultOpts && exampleOpts)
+      createEffect(defaultOpts, exampleOpts)
+  }
+
+  function createEffect (defaultOpts, opts) {
+    var emittersOpts = []
+    for (var i = 0; i < opts.length /*!*/ - 1 /*!*/; i++) {
+      emittersOpts[i] = {}
+      for (var opt in defaultOpts) {
+        emittersOpts[i][opt] = defaultOpts[opt]
+
+        if (opts[i + 1][opt]) {
+          emittersOpts[i][opt] = opts[i + 1][opt]
+        } else if (opts[0][opt]) {
+          emittersOpts[i][opt] = opts[0][opt]
+        }
       }
     }
-    images[i].src = this.textureSources[i]
-  }
-
-  function onImagesLoaded () {
-    self.textureManager('add')(images)
-    for (var i = 0; i < self.emitters.length; i++) {
-      self.emitters[i].bindTexture = self.textureManager('bind')(i)
+    for (var i = 0; i < emittersOpts.length; i++) {
+      self.textureSources[i] = emittersOpts[i].textSource
+      self.emitters[i] = new ParticleEmitter(self, emittersOpts[i], i)
     }
-    callback()
-  }
 
+    var images = []
+      , loaded = 0
+
+    for (var i = 0; i < self.textureSources.length; i++) {
+      images[i] = new Image()
+      images[i].onload = function () {
+        if (++loaded === self.textureSources.length) {
+          onImagesLoaded()
+        }
+      }
+      images[i].src = self.textureSources[i]
+    }
+
+    function onImagesLoaded () {
+      self.textureManager('add')(images)
+      for (var i = 0; i < self.emitters.length; i++) {
+        self.emitters[i].bindTexture = self.textureManager('bind')(i)
+      }
+      callback(self)
+    }
+  }
 }
+
 
 ParticleEffect.prototype = {
   constructor: ParticleEffect,
   render: function () {
+
+    gl.enable(gl.BLEND)
+    gl.disable(gl.DEPTH_TEST)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
+
     var newTime = new Date().getTime()
     this.delta = newTime - this.oldTime
     this.oldTime = newTime
