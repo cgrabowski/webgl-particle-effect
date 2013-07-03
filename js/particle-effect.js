@@ -1,7 +1,6 @@
 function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
-  if (arguments.length === 0)
-    return
-
+  if (THREE)
+    THREE.Object3D.call(this)
   if (!gl || !gl instanceof WebGLRenderingContext)
     throw new Error('ParticleEffect requires a valid gl context')
 
@@ -10,24 +9,20 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
   effectOpts = effectOpts || {}
 
   this.gl = gl
-  this.vMatrix = effectOpts.vMatrix || mat4.create()
-  this.pMatrix = effectOpts.pMatrix || mat4.perspective(mat4.create(), 0.79, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0)
+  this.camera = effectOpts.camera || (function () {
+    console.error('I need a camera!')
+  }())
   this.vShader = effectOpts.vShader || ParticleEffect.defaultVertexShader()
   this.fShader = effectOpts.fShader || ParticleEffect.defaultFragmentShader()
   this.shaderSourceType = effectOpts.shaderSourceType || 'array'
   this.emitters = []
   this.textureSources = []
-  this.oldTime = new Date().getTime()
+  this.oldTime = 0
   this.delta = 0
   this.textureManager = ParticleEffect.textureManager(gl)
   this.shaderManager = ParticleEffect.shaderManager(gl)
   this.programHandle = this.shaderManager('createProgram')(this.vShader, this.fShader, this.shaderSourceType)
-  this.shaderProgram = this.shaderManager('useProgram')(this.programHandle)
-
-  if (!effectOpts.vMatrix) {
-    mat4.lookAt(this.vMatrix, [-1, 0, 5], [0, 0, -5], [0, 1, 0])
-    mat4.translate(this.vMatrix, this.vMatrix, [0.0, -1.0, -15.0])
-  }
+  this.useProgram = this.shaderManager('useProgram')
 
   window.addEventListener('unload', function (event) {
     self.textureManager('dispose')()
@@ -109,27 +104,37 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
       for (var i = 0; i < self.emitters.length; i++) {
         self.emitters[i].bindTexture = self.textureManager('bind')(i)
       }
-      callback(self)
+      if (typeof(callback) === 'function')
+        callback(self)
     }
   }
 }
 
+if (THREE) {
+  ParticleEffect.prototype = Object.create(THREE.Object3D.prototype)
+  ParticleEffect.prototype.constructor = ParticleEffect
+}
 
-ParticleEffect.prototype = {
-  constructor: ParticleEffect,
-  render: function () {
+ParticleEffect.prototype.render = function () {
+  gl.enable(gl.BLEND)
+  gl.disable(gl.DEPTH_TEST)
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
+  gl.disable(gl.CULL_FACE)
 
-    gl.enable(gl.BLEND)
-    gl.disable(gl.DEPTH_TEST)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
+  this.useProgram(this.programHandle)
 
-    var newTime = new Date().getTime()
-    this.delta = newTime - this.oldTime
-    this.oldTime = newTime
-    var ln = this.emitters.length
-    for (var i = 0; i < ln; i++)
-      this.emitters[i].render(this.delta)
-  }
+  if (!this.oldTime)
+    this.oldTime = new Date().getTime()
+  var newTime = new Date().getTime()
+  this.delta = newTime - this.oldTime
+  this.oldTime = newTime
+
+  var ln = this.emitters.length
+  for (var i = 0; i < ln; i++)
+    this.emitters[i].render(this.delta)
+}
+
+ParticleEffect.prototype.init = function () {
 }
 
 ParticleEffect.shaderManager = function (gl) {
@@ -139,9 +144,9 @@ ParticleEffect.shaderManager = function (gl) {
     , activeProgramHandle
 
   return function (method) {
-
     switch (method) {
-      case('createProgram'):
+
+      case ('createProgram'):
         return function (vertex, fragment, sourceType) {
           var fragmentShader
             , vertexShader
@@ -173,30 +178,33 @@ ParticleEffect.shaderManager = function (gl) {
           gl.enableVertexAttribArray(prog.vertexPositionAttribute)
           prog.textureCoordAttribute = gl.getAttribLocation(prog, "aTextureCoord")
           gl.enableVertexAttribArray(prog.textureCoordAttribute)
-          prog.mvpMatrixUniform = gl.getUniformLocation(prog, "uMVPMatrix")
+          prog.mvpProjectionMatrixUniform = gl.getUniformLocation(prog, "uMVPMatrix")
           prog.samplerUniform = gl.getUniformLocation(prog, "uSampler")
           programs.push(prog)
           vertexShaders.push(vertexShader)
           fragmentShaders.push(fragmentShader)
           return programs.length - 1
         }
-        break;
 
-      case('useProgram'):
+      case ('useProgram'):
         return function (index) {
           gl.useProgram(programs[index])
+          activeProgramHandle = index
           return programs[index]
         }
 
-      case('dispose'):
+      case ('getShaderVariable'):
+        return function (string) {
+          return programs[activeProgramHandle][string]
+        }
+
+      case ('dispose'):
         return function () {
           for (var i = 0; i < programs.length; i++) {
             gl.deleteProgram(programs[i])
           }
           vertexShaders = fragmentShaders = programs = null
-
         }
-        break;
 
       default:
         throw new Error('shaderManager\'s argument must be a method name: createProgram or dispose')
@@ -287,10 +295,9 @@ ParticleEffect.textureManager = function (gl) {
     throw new Error('invalid gl instance')
 
   return function (method) {
-
     switch (method) {
 
-      case('add'):
+      case ('add'):
         return function (images) {
           if (!typeof(images) === 'array') {
             textures.push(createTexture(images))
@@ -303,28 +310,28 @@ ParticleEffect.textureManager = function (gl) {
             return firstHandle
           }
         }
-        break;
-      case('bind'):
+
+      case ('bind'):
         return function (index) {
           return function () {
             gl.bindTexture(gl.TEXTURE_2D, textures[index])
           }
         }
-        break;
-      case('remove'):
+
+      case ('remove'):
         return function (index) {
           gl.deleteTexture(textures[index])
           textures.splice(index, 1)
         }
-        break;
-      case('replace'):
+
+      case ('replace'):
         return function (image, index) {
           var oldTexture = textures[index]
           textures[index] = createTexture(image)
           gl.deleteTexture(oldTexture)
           return textures[index]
         }
-        break;
+
       case ('dispose'):
         return function () {
           for (var i = 0; i < textures.length; i++) {
@@ -332,11 +339,10 @@ ParticleEffect.textureManager = function (gl) {
           }
           textures = null
         }
-        break;
+
       default:
         throw new Error('textureManager\'s argument must be a method name: init, add, get, remove, replace, or dispose')
     }
-
   }
 
   function createTexture (image) {
@@ -370,7 +376,10 @@ function ParticleEmitter (effect, opts, index) {
       this.opts[opt] = this[opt]
   }
 
-  this.matrix = mat4.create()
+  this._matrix = mat4.create()
+  this.mMatrix = effect.matrix.elements
+  this.vMatrix = effect.camera.matrixWorld.elements
+  this.pMatrix = effect.camera.projectionMatrix.elements
   this.lives = []
   this.lifeElapsed = []
   this.starts = []
@@ -402,20 +411,21 @@ function ParticleEmitter (effect, opts, index) {
 
 }
 
-ParticleEmitter.prototype = new ParticleEffect
-ParticleEmitter.prototype.constructor = ParticleEmitter
-
 ParticleEmitter.prototype.render = function (delta) {
   var effect = this.effect
     , gl = effect.gl
     , numParticles = this.maxParticles
     , text = this.texture
-    , shaderProgram = effect.shaderProgram
-    , mvpMatrixUniform = shaderProgram.mvpMatrixUniform
+    , getShaderVar = effect.shaderManager('getShaderVariable')
+    , mvpProjectionMatrixUniform = getShaderVar('mvpProjectionMatrixUniform')
+    , vertexPositionAttribute = getShaderVar('vertexPositionAttribute')
+    , textureCoordAttribute = getShaderVar('textureCoorAttribute')
+    , samplerUniform = getShaderVar('samplerUniform')
 
-    , matrix = this.matrix
-    , vMatrix = effect.vMatrix
-    , pMatrix = effect.pMatrix
+    , _matrix = this._matrix
+    , mMatrix = this.mMatrix
+    , vMatrix = this.vMatrix
+    , pMatrix = this.pMatrix
 
     , minLife = this.minLife
     , maxLife = this.maxLife
@@ -443,11 +453,11 @@ ParticleEmitter.prototype.render = function (delta) {
 
   //resurect dead particles with fresh randomized props
   for (var i = 0; i < lifeLen; i++) {
-// particle gets older
+    // particle gets older
     elapsed[i] += delta
     // if particle's life is elapsed, it needs resurected
     if (elapsed[i] > lives[i]) {
-// new lifespan
+      // new lifespan
       lives[i] = rp(minLife, maxLife, true)
       // new start point
       starts.splice(i * 3, 3, rp(this.minOffsetX, this.maxOffsetX), rp(this.minOffsetY, this.maxOffsetY), rp(this.minOffsetZ, this.maxOffsetZ))
@@ -463,28 +473,28 @@ ParticleEmitter.prototype.render = function (delta) {
   }
 
   gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff)
-  gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0)
+  gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0)
   gl.bindBuffer(gl.ARRAY_BUFFER, this.textCoordBuff)
-  gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0)
-  gl.uniform1i(shaderProgram.samplerUniform, 0)
+  gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0)
+  gl.uniform1i(samplerUniform, 0)
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuff)
   this.bindTexture()
 
   for (i = 0; i < numParticles; i++) {
-// if elapsed is negative, the particle is delayed
+    // if elapsed is negative, the particle is delayed
     if (elapsed[i] < 0)
       continue
-    m4.identity(matrix)
-    m4.translate(matrix, matrix, [
+    //m4.copy(matrix, mMatrix)
+    m4.translate(_matrix, mMatrix, [
       starts[i * 3] + elapsed[i] * speeds[i] * directions[i * 3] / 100000,
       starts[i * 3 + 1] + elapsed[i] * speeds[i] * directions[i * 3 + 1] / 100000,
       starts[i * 3 + 2] + elapsed[i] * speeds[i] * directions[i * 3 + 2] / 100000
     ])
-    m4.rotate(matrix, matrix, rotations[i] * 0.00001 * elapsed[i] % 1000, [0, 0, 1])
+    m4.rotate(_matrix, _matrix, rotations[i] * 0.00001 * elapsed[i] % 1000, [0, 0, 1])
 
-    m4.multiply(matrix, vMatrix, matrix)
-    m4.multiply(matrix, pMatrix, matrix)
-    gl.uniformMatrix4fv(mvpMatrixUniform, false, matrix)
+    m4.multiply(_matrix, vMatrix, _matrix)
+    m4.multiply(_matrix, pMatrix, _matrix)
+    gl.uniformMatrix4fv(mvpProjectionMatrixUniform, false, _matrix)
     gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0)
   }
 }
