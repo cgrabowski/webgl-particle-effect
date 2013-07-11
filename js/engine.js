@@ -23,8 +23,9 @@ function engine (canvas, emittersOpts, engineCallback) {
     var scene = new THREE.Scene(),
         camera = new THREE.PerspectiveCamera(60, gl.viewportWidth / gl.viewportHeight, 1, 1000.0),
         renderer = new THREE.WebGLRenderer({canvas: canvas}),
-    effect = new ParticleEffect(gl, {camera: camera}, emittersOpts, effectCallback),
-        controls = new THREE.TrackballControls(camera, canvas);
+    controls = new THREE.TrackballControls(camera, canvas);
+
+    effect = new ParticleEffect(gl, {camera: camera}, emittersOpts, effectCallback);
 
     controls.rotateSpeed = 1.0;
     controls.zoomSpeed = 10;
@@ -68,8 +69,8 @@ function engine (canvas, emittersOpts, engineCallback) {
         }
     }
 
-    function render () {        
-        requestAnimFrame(render);        
+    function render () {
+        requestAnimFrame(render);
         renderer.render(scene, camera);
         controls.update();
     }

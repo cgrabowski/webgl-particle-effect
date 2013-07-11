@@ -449,6 +449,7 @@ ParticleEmitter.prototype.render = function (delta) {
         rotations = this.rotations,
         rp = ParticleEmitter.randlerp,
         m4 = mat4;
+
     //resurect dead particles with fresh randomized props;
     for (var i = 0; i < lifeLen; i++) {
         // particle gets older;
@@ -467,6 +468,29 @@ ParticleEmitter.prototype.render = function (delta) {
             rotations[i] = rp(this.minRot, this.maxRot);
         }
 
+
+        //[V x1, y1, und, und, x2, y2, m, b, V x2, y2, m, b, [...]]
+        var minArr = this.minDirXTest,
+            maxArr = this.maxDirXTest;
+
+        var k = 0;
+        while (elapsed[i] / lives[i] > minArr[k + 4]) {
+            k += 4;
+        }
+
+        var min = minArr[k + 6] * (elapsed[i] / lives[i]) + minArr[k + 7];
+
+        k = 0;
+        while (elapsed[i] / lives[i] > maxArr[k + 4]) {
+            k += 4;
+        }
+
+        var max = maxArr[k + 6] * (elapsed[i] / lives[i]) + maxArr[k + 7];
+
+        if (max < Infinity && min < Infinity) {
+            directions[i * 3] += (i % 2) ? rp(0, max) / 50 : rp(0, min) / 50;
+        }
+
     }
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff);
@@ -476,6 +500,7 @@ ParticleEmitter.prototype.render = function (delta) {
     gl.uniform1i(samplerUniform, 0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuff);
     this.bindTexture();
+
     for (i = 0; i < numParticles; i++) {
         // if elapsed is negative, the particle is delayed;
         if (elapsed[i] < 0) {
@@ -490,7 +515,7 @@ ParticleEmitter.prototype.render = function (delta) {
         m4.rotate(_matrix, _matrix, rotations[i] * 0.00001 * elapsed[i] % 1000, [0, 0, 1]);
         m4.multiply(_matrix, vMatrix, _matrix);
         m4.multiply(_matrix, pMatrix, _matrix);
-        gl.uniformMatrix4fv(mvpProjectionMatrixUniform, false, _matrix);        
+        gl.uniformMatrix4fv(mvpProjectionMatrixUniform, false, _matrix);
         gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
     }
 };
@@ -522,4 +547,11 @@ ParticleEmitter.lerp = function (min, max, factor, rnd) {
         return factor * (max - min) + min;
     }
 }
-    
+
+ParticleEmitter.srandlerp = function (min, max, rnd) {
+    if (rnd) {
+        return Math.round(Math.random() * (max - min) + min);
+    } else {
+        return Math.sqrt(Math.random()) * (max - min) + min;
+    }
+};

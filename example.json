@@ -18,11 +18,5 @@
   }, {
     "name": "emitter 3",
     "textSource": "igimg/plasma32-12.png"
-  }, {
-    "name": "emitter 4",
-    "textSource": "igimg/plasma32-22.png"
-  }, {
-    "name": "emitter 5",
-    "textSource": "igimg/plasma32-32.png"
   }
 ]

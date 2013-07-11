@@ -3,8 +3,8 @@
   "textSource": "particle.png",
   "minParticles": 0,
   "maxParticles": 20,
-  "minLife": 1,
-  "maxLife": 10000,
+  "minLife": 4000,
+  "maxLife": 6000,
   "duration": 5000,
   "continuous": true,
   "minDelay": 25,
@@ -17,8 +17,8 @@
   "maxOffsetZ": -10,
   "minSpeed": 100,
   "maxSpeed": 500,
-  "minDirX": -0.25,
-  "maxDirX": 0.25,
+  "minDirX": 0,
+  "maxDirX": 0,
   "minDirY": 1,
   "maxDirY": 1,
   "minDirZ": 0,
@@ -28,5 +28,7 @@
   "maxRot": 540,
   "minRotVec": [0, 0, 1],
   "maxRotVec": [0, 0, 1],
-  "rotAcc": 0
+  "rotAcc": 0,
+  "minDirXTest": [0, -1, "undefined", "undefined", 1, 1, 2, -1],
+  "maxDirXTest": [0, -1, "undefined", "undefined", 1, 1, 2, -1]
 }
