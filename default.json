@@ -1,5 +1,5 @@
 {
-  "name": "defaults",
+  "emitterName": "default",
   "textSource": "particle.png",
   "minParticles": 0,
   "maxParticles": 20,
@@ -30,5 +30,6 @@
   "maxRotVec": [0, 0, 1],
   "rotAcc": 0,
   "minDirXTest": [0, -1, "undefined", "undefined", 1, 1, 2, -1],
-  "maxDirXTest": [0, -1, "undefined", "undefined", 1, 1, 2, -1]
+  "maxDirXTest": [0, -1, "undefined", "undefined", 1, 1, 2, -1],
+  "graphableConfig": 0
 }

@@ -14,6 +14,7 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
     this.vShader = effectOpts.vShader || ParticleEffect.defaultVertexShader();
     this.fShader = effectOpts.fShader || ParticleEffect.defaultFragmentShader();
     this.shaderSourceType = effectOpts.shaderSourceType || 'array';
+    this.graphablesConfig = effectOpts.graphablesConfig || 0;
     this.emitters = [];
     this.textureSources = [];
     this.oldTime = 0;
@@ -145,6 +146,41 @@ ParticleEffect.prototype.render = function () {
 ParticleEffect.prototype.init = function () {
 }
 
+ParticleEffect.GRAPHABLES = ['offset x', 'offset y', 'offset z', 'speed', 'direction x', 'direction y', 'direction z', 'rotation'];
+
+ParticleEffect.BASE_GRAPH_ARRAY = [0, -1, null, null, 1, 1, 2, -1];
+
+
+ParticleEffect.GRAPHABLE_FLAGS = {
+    OFFSET_X_BIT: 1,
+    OFFSET_Y_BIT: 2,
+    OFFSET_Z_BIT: 4,
+    SPEED_BIT: 8,
+    DIRECTION_X_BIT: 16,
+    DIRECTION_Y_BIT: 32,
+    DIRECTION_Z_BIT: 64,
+    ROTATION_BIT: 128
+};
+
+ParticleEffect.prototype.enableGraphed = function (bitmask) {
+    this.graphablesConfig |= bitmask;
+}
+
+ParticleEffect.prototype.disableGraphed = function (bitmask) {
+    this.graphablesConfig = ~(~this.graphablesConfig | bitmask);
+}
+ParticleEffect.prototype.getEnabledGraphed = function () {
+    var arr = [];
+
+    for (var flag in ParticleEffect.GRAPHABLE_FLAGS) {
+        if (ParticleEffect.GRAPHABLE_FLAGS[flag] & this.graphablesConfig) {
+            arr.push(flag);
+        }
+    }
+
+    return arr;
+}
+
 ParticleEffect.shaderManager = function (gl) {
     var programs = [],
         vertexShaders = [],
@@ -240,7 +276,7 @@ ParticleEffect.shaderManager = function (gl) {
         } else if (shaderScript.type === "x-shader/x-fragment") {
             type = 'fragment';
         } else {
-            throw new Error('Shader mime type must be "x-shader/x-vertex" or "x-shader/x-fragment"');
+            throw new Error('Shader MIME type must be "x-shader/x-vertex" or "x-shader/x-fragment"');
             return null;
         }
 
@@ -370,8 +406,8 @@ function ParticleEmitter (effect, opts, index) {
     var rp = ParticleEmitter.randlerp;
     this.effect = effect || null;
     for (var opt in opts) {
-        if (opt === 'name') {
-            this.name = opts.name || ((index) ? "emitter " + index : "unamed effect");
+        if (opt === 'emitterName') {
+            this.emitterName = opts.emitterName || ((index) ? "emitter " + index : "unnamed");
         } else {
             this[opt] = opts[opt];
         }
@@ -394,9 +430,11 @@ function ParticleEmitter (effect, opts, index) {
     this.directions = [];
     this.speeds = [];
     this.rotations = [];
+    this.randoms = []
     this.vertices = [-0.1, -0.1, 0.1, 0.1, -0.1, 0.1, 0.1, 0.1, 0.1, -0.1, 0.1, 0.1];
     this.textCoords = [0, 0, 1, 0, 1, 1, 0, 1];
     this.indices = [0, 1, 2, 0, 2, 3];
+    this.graphablesConfig = opts.graphablesConfig || 0;
     for (i = 0; i < opts.maxParticles; i++) {
         this.lives.push(rp(opts.minLife, opts.maxLife, true));
         this.lifeElapsed.push(-rp(opts.minDelay, opts.maxDelay, true));
@@ -404,8 +442,8 @@ function ParticleEmitter (effect, opts, index) {
         this.directions.push(rp(opts.minDirX, opts.maxDirX), rp(opts.minDirY, this.maxDirY), rp(opts.minDirZ, opts.maxDirZ));
         this.speeds.push(rp(opts.minSpeed, opts.maxSpeed));
         this.rotations.push(rp(opts.minRot, opts.maxRot));
+        this.randoms.push(Math.random());
     }
-
     this.vertId = opts.vertId || null;
     this.fragId = opts.fragId || null;
     if (opts.vertId && opts.fragId) {
@@ -415,6 +453,9 @@ function ParticleEmitter (effect, opts, index) {
         this.initBuffers();
     }
 }
+
+ParticleEmitter.prototype = Object.create(ParticleEffect.prototype);
+ParticleEmitter.prototype.constructor = ParticleEmitter;
 
 ParticleEmitter.prototype.render = function (delta) {
     var effect = this.effect,
@@ -447,6 +488,8 @@ ParticleEmitter.prototype.render = function (delta) {
         speeds = this.speeds,
         directions = this.directions,
         rotations = this.rotations,
+        randoms = this.randoms,
+        graphablesConfig = this.graphablesConfig,
         rp = ParticleEmitter.randlerp,
         m4 = mat4;
 
@@ -466,32 +509,51 @@ ParticleEmitter.prototype.render = function (delta) {
             directions.splice(i * 3, 3, rp(minDirX, maxDirX), rp(minDirY, maxDirY), rp(minDirZ, maxDirZ));
             speeds[i] = rp(this.minSpeed, this.maxSpeed);
             rotations[i] = rp(this.minRot, this.maxRot);
+            randoms[i] = Math.random();
         }
+        /*
+         ParticleEffect.FLAGS = {
+         OFFSET_X_BIT: 1,
+         OFFSET_Y_BIT: 2,
+         OFFSET_Z_BIT: 4,
+         SPEED_BIT: 8,
+         DIRECTION_X_BIT: 16,
+         DIRECTION_Y_BIT: 32,
+         DIRECTION_Z_BIT: 64,
+         ROTATION_BIT: 128
+         };
+         */
+        //var config = this.graphablesConfig >>> 4;
 
-
-        //[V x1, y1, und, und, x2, y2, m, b, V x2, y2, m, b, [...]]
+        //while (config > 0) {
+        //[V x1, y1, null, null, x2, y2, m, b, V x2, y2, m, b, [...]]
         var minArr = this.minDirXTest,
-            maxArr = this.maxDirXTest;
+            maxArr = this.maxDirXTest,
+            min,
+            max,
+            k = 0;
 
-        var k = 0;
         while (elapsed[i] / lives[i] > minArr[k + 4]) {
             k += 4;
         }
+        ;
 
-        var min = minArr[k + 6] * (elapsed[i] / lives[i]) + minArr[k + 7];
+        min = minArr[k + 6] * (elapsed[i] / lives[i]) + minArr[k + 7];
 
-        k = 0;
+        k = 4;
         while (elapsed[i] / lives[i] > maxArr[k + 4]) {
             k += 4;
         }
 
-        var max = maxArr[k + 6] * (elapsed[i] / lives[i]) + maxArr[k + 7];
+        max = maxArr[k + 6] * (elapsed[i] / lives[i]) + maxArr[k + 7];
 
         if (max < Infinity && min < Infinity) {
-            directions[i * 3] += (i % 2) ? rp(0, max) / 50 : rp(0, min) / 50;
+            //directions[i * 3] += (i % 2) ? rp(0, max) / 50 : rp(0, min) / 50;
+            directions[i * 3] = ParticleEmitter.lerp(min, max, randoms[i]);
         }
-
     }
+    // config >>>= 1;
+    //}
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff);
     gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);

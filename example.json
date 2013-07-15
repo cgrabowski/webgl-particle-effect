@@ -1,22 +1,26 @@
 [
-  {
-    "name": "shared",
-    "maxParticles": 500,
-    "minDirZ": -1,
-    "maxDirZ": 1,
-    "minDelay": 0,
-    "maxDelay": 0
-  }, {
-    "name": "emitter 0",
-    "textSource": "igimg/plasma32-1.png"
-  }, {
-    "name": "emitter 1",
-    "textSource": "igimg/plasma32-2.png"
-  }, {
-    "name": "emitter 2",
-    "textSource": "igimg/plasma32-3.png"
-  }, {
-    "name": "emitter 3",
-    "textSource": "igimg/plasma32-12.png"
-  }
+    {
+        "name": "shared",
+        "maxParticles": 500,
+        "minDirZ": -1,
+        "maxDirZ": 1,
+        "minDelay": 0,
+        "maxDelay": 0
+    }, {
+        "emitterName": "emitter 0",
+        "textSource": "igimg/plasma32-1.png",
+        "graphableConfig": 96
+    }, {
+        "emitterName": "emitter 1",
+        "textSource": "igimg/plasma32-2.png",
+        "graphableConfig": 96
+    }, {
+        "emitterName": "emitter 2",
+        "textSource": "igimg/plasma32-3.png",
+        "graphableConfig": 96
+    }, {
+        "emitterName": "emitter 3",
+        "textSource": "igimg/plasma32-12.png",
+        "graphableConfig": 96
+    }
 ]
