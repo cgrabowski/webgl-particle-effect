@@ -15,6 +15,7 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
     this.fShader = effectOpts.fShader || ParticleEffect.defaultFragmentShader();
     this.shaderSourceType = effectOpts.shaderSourceType || 'array';
     this.graphablesConfig = effectOpts.graphablesConfig || 0;
+    this.channelConfig = effectOpts.channelConfig || 0;
     this.emitters = [];
     this.textureSources = [];
     this.oldTime = 0;
@@ -29,96 +30,112 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
         self.shaderManager('dispose')();
     });
 
-    /*
-     * If emitterOpts are passed to engine, they are used.
-     * If not, example opts are loaded from example.json.
-     * default.json is allways loaded as a fallback for opts || exampleOpts
-     */
+    var defaultEmittersOpts = [{
+            emitterName: "default",
+            textSource: "particle.png",
+            numParticles: 200,
+            //
+            minLife: 4000,
+            maxLife: 6000,
+            //
+            minDelay: 0,
+            maxDelay: 500,
+            //
+            minOffsetX: -2,
+            maxOffsetX: 2,
+            //
+            minOffsetY: -1,
+            maxOffsetY: 1,
+            //
+            minOffsetZ: -10,
+            maxOffsetZ: -9,
+            //
+            minSpeed: 100,
+            maxSpeed: 500,
+            //
+            minDirectionX: 0,
+            maxDirectionX: 0,
+            //
+            minDirectionXTest: [0, -1, null, null, 1, 1, 2, -1],
+            maxDirectionXTest: [0, -1, null, null, 1, 1, 2, -1],
+            //
+            minDirectionY: 1,
+            maxDirectionY: 1,
+            //
+            minDirectionZ: 0,
+            maxDirectionZ: 0,
+            //
+            minRotation: 180,
+            maxRotation: 540
+        }, {
+            "emitterName": "emitter 0",
+            "textSource": "igimg/plasma32-1.png"
+        }, {
+            "emitterName": "emitter 1",
+            "textSource": "igimg/plasma32-2.png"
+        }, {
+            "emitterName": "emitter 2",
+            "textSource": "igimg/plasma32-3.png"
+        }, {
+            "emitterName": "emitter 3",
+            "textSource": "igimg/plasma32-12.png"
+        }];
 
-    var defaultReq = new XMLHttpRequest(),
-        defaultOpts,
-        effect;
-
-    defaultReq.onload = function () {
-        handleRes('default', this.responseText);
-        if (emittersOpts) {
-            createEffect(defaultOpts, emittersOpts);
+    if (emittersOpts) {
+        for (var i = 1; i < emittersOpts.length; i++) {
+            for (var opt in defaultEmittersOpts[i]) {
+                emittersOpts[i][opt] = emittersOpts[i][opt] ||
+                    emittersOpts[0][opt] ||
+                    defaultEmittersOpts[i][opt] ||
+                    defaultEmittersOpts[0][opt];
+            }
         }
-    };
 
-    defaultReq.open('get', 'http://localhost/WebGLParticleEffect/default.json');
-    defaultReq.send();
+        emittersOpts.splice(0, 1);
 
-    if (!emittersOpts) {
-        var exampleReq = new XMLHttpRequest(),
-            exampleOpts;
+    } else {
+        emittersOpts = defaultEmittersOpts;
+        for (var opt in emittersOpts[0]) {
+            for (var i = 1; i < emittersOpts.length; i++) {
+                emittersOpts[i][opt] = emittersOpts[i][opt] ||
+                    emittersOpts[0][opt];
+            }
+        }
 
-        exampleReq.onload = function () {
-            handleRes('example', this.responseText);
-        };
+        emittersOpts.splice(0, 1);
 
-        exampleReq.open('get', 'http://localhost/WebGLParticleEffect/example.json');
-        exampleReq.send();
     }
 
-    function handleRes (name, resText) {
+    for (var i = 0; i < emittersOpts.length; i++) {
+        self.textureSources[i] = emittersOpts[i].textSource;
+        self.emitters[i] = new ParticleEmitter(self, emittersOpts[i], i);
+    }
 
-        if (name === 'default') {
-            defaultOpts = JSON.parse(resText);
-        } else if (name === 'example') {
-            exampleOpts = JSON.parse(resText);
+    var images = [],
+        loaded = 0;
+
+    for (var i = 0; i < self.textureSources.length; i++) {
+        images[i] = new Image();
+        images[i].onload = function () {
+            if (++loaded === self.textureSources.length) {
+                onImagesLoaded();
+            }
         }
+        images[i].src = self.textureSources[i];
+    }
 
-        if (defaultOpts && exampleOpts) {
-            createEffect(defaultOpts, exampleOpts);
+    function onImagesLoaded () {
+        self.textureManager('add')(images);
+        for (var i = 0; i < self.emitters.length; i++) {
+            self.emitters[i].bindTexture = self.textureManager('bind')(i);
+        }
+        if (typeof(callback) === 'function') {
+            callback(self);
         }
     }
 
-    function createEffect (defaultOpts, opts) {
-        var emittersOpts = [];
-
-        for (var i = 0; i < opts.length /*!*/ - 1 /*!*/; i++) {
-            emittersOpts[i] = {};
-            for (var opt in defaultOpts) {
-                emittersOpts[i][opt] = defaultOpts[opt];
-                if (opts[i + 1][opt]) {
-                    emittersOpts[i][opt] = opts[i + 1][opt];
-                } else if (opts[0][opt]) {
-                    emittersOpts[i][opt] = opts[0][opt];
-                }
-            }
-        }
-
-        for (var i = 0; i < emittersOpts.length; i++) {
-            self.textureSources[i] = emittersOpts[i].textSource;
-            self.emitters[i] = new ParticleEmitter(self, emittersOpts[i], i);
-        }
-
-        var images = [],
-            loaded = 0;
-
-        for (var i = 0; i < self.textureSources.length; i++) {
-            images[i] = new Image();
-            images[i].onload = function () {
-                if (++loaded === self.textureSources.length) {
-                    onImagesLoaded();
-                }
-            }
-            images[i].src = self.textureSources[i];
-        }
-
-        function onImagesLoaded () {
-            self.textureManager('add')(images);
-            for (var i = 0; i < self.emitters.length; i++) {
-                self.emitters[i].bindTexture = self.textureManager('bind')(i);
-            }
-            if (typeof(callback) === 'function') {
-                callback(self);
-            }
-        }
-
-    }
 }
+
 
 if (THREE) {
     ParticleEffect.prototype = Object.create(THREE.Object3D.prototype);
@@ -141,45 +158,92 @@ ParticleEffect.prototype.render = function () {
     for (var i = 0; i < ln; i++) {
         this.emitters[i].render(this.delta);
     }
-}
+};
 
 ParticleEffect.prototype.init = function () {
-}
+};
 
-ParticleEffect.GRAPHABLES = ['offset x', 'offset y', 'offset z', 'speed', 'direction x', 'direction y', 'direction z', 'rotation'];
+ParticleEffect.GRAPHABLES = ['offsetX', 'offsetY', 'offsetZ', 'speed', 'directionX', 'directionY', 'directionZ', 'rotation'];
 
 ParticleEffect.BASE_GRAPH_ARRAY = [0, -1, null, null, 1, 1, 2, -1];
 
 
 ParticleEffect.GRAPHABLE_FLAGS = {
-    OFFSET_X_BIT: 1,
-    OFFSET_Y_BIT: 2,
-    OFFSET_Z_BIT: 4,
+    OFFSETX_BIT: 1,
+    OFFSETY_BIT: 2,
+    OFFSETZ_BIT: 4,
     SPEED_BIT: 8,
-    DIRECTION_X_BIT: 16,
-    DIRECTION_Y_BIT: 32,
-    DIRECTION_Z_BIT: 64,
+    DIRECTIONX_BIT: 16,
+    DIRECTIONY_BIT: 32,
+    DIRECTIONZ_BIT: 64,
     ROTATION_BIT: 128
 };
 
 ParticleEffect.prototype.enableGraphed = function (bitmask) {
     this.graphablesConfig |= bitmask;
-}
+};
 
 ParticleEffect.prototype.disableGraphed = function (bitmask) {
     this.graphablesConfig = ~(~this.graphablesConfig | bitmask);
-}
+};
+
 ParticleEffect.prototype.getEnabledGraphed = function () {
-    var arr = [];
+    var arr = [],
+        i = 0;
 
     for (var flag in ParticleEffect.GRAPHABLE_FLAGS) {
         if (ParticleEffect.GRAPHABLE_FLAGS[flag] & this.graphablesConfig) {
-            arr.push(flag);
+            var str = flag.toLowerCase().substr(0, flag.length - 4);
+            if (str.match(/[xyz]$/)) {
+                str = str.substr(0, str.length - 1) + str.substr(-1).toUpperCase();
+            }
+            arr.push(flag.toLowerCase().substr(0, flag.length - 4));
         }
+        i++;
     }
 
     return arr;
-}
+};
+
+ParticleEffect.CHANNEL_FLAGS = {
+    NUMPARTICLES_BIT: 1,
+    LIFE_BIT: 2,
+    DELAY_BIT: 4,
+    OFFSETX_BIT: 8,
+    OFFSETY_BIT: 16,
+    OFFSETZ_BIT: 32,
+    SPEED_BIT: 64,
+    DIRECTIONX_BIT: 128,
+    DIRECTIONY_BIT: 256,
+    DIRECTIONZ_BIT: 512,
+    ROTATION_BIT: 1024
+};
+
+ParticleEffect.prototype.useOwnChannel = function (bitmask) {
+    this.channelConfig |= bitmask;
+};
+
+ParticleEffect.prototype.useMasterChannel = function (bitmask) {
+    this.channelConfig = ~(~this.channelConfig | bitmask);
+};
+
+ParticleEffect.prototype.getUsingOwnChannel = function () {
+    var arr = [],
+        i = 0;
+
+    for (var flag in ParticleEffect.GRAPHABLE_FLAGS) {
+        if (ParticleEffect.GRAPHABLE_FLAGS[flag] & this.channelConfig) {
+            var str = flag.toLowerCase().substr(0, flag.length - 4);
+            if (str.match(/[xyz]$/)) {
+                str = str.substr(0, str.length - 1) + str.substr(-1).toUpperCase();
+            }
+            arr.push(flag.toLowerCase().substr(0, flag.length - 4));
+        }
+        i++;
+    }
+
+    return arr;
+};
 
 ParticleEffect.shaderManager = function (gl) {
     var programs = [],
@@ -399,221 +463,4 @@ ParticleEffect.textureManager = function (gl) {
         return texture;
     }
 
-};
-
-
-function ParticleEmitter (effect, opts, index) {
-    var rp = ParticleEmitter.randlerp;
-    this.effect = effect || null;
-    for (var opt in opts) {
-        if (opt === 'emitterName') {
-            this.emitterName = opts.emitterName || ((index) ? "emitter " + index : "unnamed");
-        } else {
-            this[opt] = opts[opt];
-        }
-    }
-
-    this.opts = {};
-    for (var opt in opts) {
-        if (typeof this[opt] !== 'undefined') {
-            this.opts[opt] = this[opt];
-        }
-    }
-
-    this._matrix = mat4.create();
-    this.mMatrix = effect.matrix.elements;
-    this.vMatrix = effect.camera.matrixWorld.elements;
-    this.pMatrix = effect.camera.projectionMatrix.elements;
-    this.lives = [];
-    this.lifeElapsed = [];
-    this.starts = [];
-    this.directions = [];
-    this.speeds = [];
-    this.rotations = [];
-    this.randoms = []
-    this.vertices = [-0.1, -0.1, 0.1, 0.1, -0.1, 0.1, 0.1, 0.1, 0.1, -0.1, 0.1, 0.1];
-    this.textCoords = [0, 0, 1, 0, 1, 1, 0, 1];
-    this.indices = [0, 1, 2, 0, 2, 3];
-    this.graphablesConfig = opts.graphablesConfig || 0;
-    for (i = 0; i < opts.maxParticles; i++) {
-        this.lives.push(rp(opts.minLife, opts.maxLife, true));
-        this.lifeElapsed.push(-rp(opts.minDelay, opts.maxDelay, true));
-        this.starts.push(rp(opts.minOffsetX, opts.maxOffsetX), rp(opts.minOffsetY, opts.maxOffsetY), rp(opts.minOffsetZ, opts.maxOffsetZ));
-        this.directions.push(rp(opts.minDirX, opts.maxDirX), rp(opts.minDirY, this.maxDirY), rp(opts.minDirZ, opts.maxDirZ));
-        this.speeds.push(rp(opts.minSpeed, opts.maxSpeed));
-        this.rotations.push(rp(opts.minRot, opts.maxRot));
-        this.randoms.push(Math.random());
-    }
-    this.vertId = opts.vertId || null;
-    this.fragId = opts.fragId || null;
-    if (opts.vertId && opts.fragId) {
-        this.createShaderProgram(effect.gl, opts.VertId, opts.FragId);
-    } else {
-        this.shaderProgram = effect.shaderProgram;
-        this.initBuffers();
-    }
-}
-
-ParticleEmitter.prototype = Object.create(ParticleEffect.prototype);
-ParticleEmitter.prototype.constructor = ParticleEmitter;
-
-ParticleEmitter.prototype.render = function (delta) {
-    var effect = this.effect,
-        gl = effect.gl,
-        numParticles = this.maxParticles,
-        text = this.texture,
-        getShaderVar = effect.shaderManager('getShaderVariable'),
-        mvpProjectionMatrixUniform = getShaderVar('mvpProjectionMatrixUniform'),
-        vertexPositionAttribute = getShaderVar('vertexPositionAttribute'),
-        textureCoordAttribute = getShaderVar('textureCoordAttribute'),
-        samplerUniform = getShaderVar('samplerUniform'),
-        _matrix = this._matrix,
-        mMatrix = this.mMatrix,
-        vMatrix = this.vMatrix,
-        pMatrix = this.pMatrix,
-        minLife = this.minLife,
-        maxLife = this.maxLife,
-        minDelay = this.minDelay,
-        maxDelay = this.maxDelay,
-        minDirX = this.minDirX,
-        maxDirX = this.maxDirX,
-        minDirY = this.minDirY,
-        maxDirY = this.maxDirY,
-        minDirZ = this.minDirZ,
-        maxDirZ = this.maxDirZ,
-        lives = this.lives,
-        elapsed = this.lifeElapsed,
-        lifeLen = this.lives.length,
-        starts = this.starts,
-        speeds = this.speeds,
-        directions = this.directions,
-        rotations = this.rotations,
-        randoms = this.randoms,
-        graphablesConfig = this.graphablesConfig,
-        rp = ParticleEmitter.randlerp,
-        m4 = mat4;
-
-    //resurect dead particles with fresh randomized props;
-    for (var i = 0; i < lifeLen; i++) {
-        // particle gets older;
-        elapsed[i] += delta;
-        // if particle's life is elapsed, it needs resurected;
-        if (elapsed[i] > lives[i]) {
-            // new lifespan;
-            lives[i] = rp(minLife, maxLife, true);
-            // new start point;
-            starts.splice(i * 3, 3, rp(this.minOffsetX, this.maxOffsetX), rp(this.minOffsetY, this.maxOffsetY), rp(this.minOffsetZ, this.maxOffsetZ));
-            // reset elapsed (negative elapsed creates delay);
-            elapsed[i] = (-rp(minDelay, maxDelay));
-            // determine a new directional vector;
-            directions.splice(i * 3, 3, rp(minDirX, maxDirX), rp(minDirY, maxDirY), rp(minDirZ, maxDirZ));
-            speeds[i] = rp(this.minSpeed, this.maxSpeed);
-            rotations[i] = rp(this.minRot, this.maxRot);
-            randoms[i] = Math.random();
-        }
-        /*
-         ParticleEffect.FLAGS = {
-         OFFSET_X_BIT: 1,
-         OFFSET_Y_BIT: 2,
-         OFFSET_Z_BIT: 4,
-         SPEED_BIT: 8,
-         DIRECTION_X_BIT: 16,
-         DIRECTION_Y_BIT: 32,
-         DIRECTION_Z_BIT: 64,
-         ROTATION_BIT: 128
-         };
-         */
-        //var config = this.graphablesConfig >>> 4;
-
-        //while (config > 0) {
-        //[V x1, y1, null, null, x2, y2, m, b, V x2, y2, m, b, [...]]
-        var minArr = this.minDirXTest,
-            maxArr = this.maxDirXTest,
-            min,
-            max,
-            k = 0;
-
-        while (elapsed[i] / lives[i] > minArr[k + 4]) {
-            k += 4;
-        }
-        ;
-
-        min = minArr[k + 6] * (elapsed[i] / lives[i]) + minArr[k + 7];
-
-        k = 4;
-        while (elapsed[i] / lives[i] > maxArr[k + 4]) {
-            k += 4;
-        }
-
-        max = maxArr[k + 6] * (elapsed[i] / lives[i]) + maxArr[k + 7];
-
-        if (max < Infinity && min < Infinity) {
-            //directions[i * 3] += (i % 2) ? rp(0, max) / 50 : rp(0, min) / 50;
-            directions[i * 3] = ParticleEmitter.lerp(min, max, randoms[i]);
-        }
-    }
-    // config >>>= 1;
-    //}
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff);
-    gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.textCoordBuff);
-    gl.vertexAttribPointer(textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
-    gl.uniform1i(samplerUniform, 0);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuff);
-    this.bindTexture();
-
-    for (i = 0; i < numParticles; i++) {
-        // if elapsed is negative, the particle is delayed;
-        if (elapsed[i] < 0) {
-            continue;
-        }
-        //m4.copy(matrix, mMatrix);
-        m4.translate(_matrix, mMatrix, [
-            starts[i * 3] + elapsed[i] * speeds[i] * directions[i * 3] / 100000,
-            starts[i * 3 + 1] + elapsed[i] * speeds[i] * directions[i * 3 + 1] / 100000,
-            starts[i * 3 + 2] + elapsed[i] * speeds[i] * directions[i * 3 + 2] / 100000
-        ]);
-        m4.rotate(_matrix, _matrix, rotations[i] * 0.00001 * elapsed[i] % 1000, [0, 0, 1]);
-        m4.multiply(_matrix, vMatrix, _matrix);
-        m4.multiply(_matrix, pMatrix, _matrix);
-        gl.uniformMatrix4fv(mvpProjectionMatrixUniform, false, _matrix);
-        gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
-    }
-};
-
-ParticleEmitter.prototype.initBuffers = function () {
-    this.vertBuff = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
-    this.textCoordBuff = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.textCoordBuff);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.textCoords), gl.STATIC_DRAW);
-    this.indexBuff = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuff);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW);
-};
-
-ParticleEmitter.randlerp = function (min, max, rnd) {
-    if (rnd) {
-        return Math.round(Math.random() * (max - min) + min);
-    } else {
-        return Math.random() * (max - min) + min;
-    }
-};
-
-ParticleEmitter.lerp = function (min, max, factor, rnd) {
-    if (rnd) {
-        return Math.round(factor * (max - min) + min);
-    } else {
-        return factor * (max - min) + min;
-    }
-}
-
-ParticleEmitter.srandlerp = function (min, max, rnd) {
-    if (rnd) {
-        return Math.round(Math.random() * (max - min) + min);
-    } else {
-        return Math.sqrt(Math.random()) * (max - min) + min;
-    }
 };
