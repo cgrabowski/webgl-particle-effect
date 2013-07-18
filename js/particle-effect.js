@@ -6,10 +6,10 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
         throw new Error('ParticleEffect requires a valid gl context');
     }
 
-    var self = this,
-        effectOpts = effectOpts || {};
+    var self = this;
 
     this.gl = gl;
+    this.opts = effectOpts = effectOpts || {};
     this.camera = effectOpts.camera || console.error('I need a camera!');
     this.vShader = effectOpts.vShader || ParticleEffect.defaultVertexShader();
     this.fShader = effectOpts.fShader || ParticleEffect.defaultFragmentShader();
@@ -55,9 +55,6 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
             //
             minDirectionX: 0,
             maxDirectionX: 0,
-            //
-            minDirectionXTest: [0, -1, null, null, 1, 1, 2, -1],
-            maxDirectionXTest: [0, -1, null, null, 1, 1, 2, -1],
             //
             minDirectionY: 1,
             maxDirectionY: 1,
