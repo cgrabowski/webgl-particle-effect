@@ -14,8 +14,8 @@ function ParticleEmitter (effect, opts, index) {
         }
     }
 
-    this.graphablesConfig = opts.graphablesConfig || 0;
-    this.channelConfig = opts.channelConfig || 0;
+    this.opts.graphablesConfig = opts.graphablesConfig || 0;
+    this.opts.channelConfig = opts.channelConfig || 0;
     this._matrix = mat4.create();
     this.mMatrix = effect.matrix.elements;
     this.vMatrix = effect.camera.matrixWorld.elements;
@@ -88,7 +88,7 @@ ParticleEmitter.prototype.render = function (delta) {
         randoms = this.randoms,
         baseArray = ParticleEffect.BASE_GRAPH_ARRAY,
         gConfig = this.graphablesConfig,
-        egConfig = effect.graphablesConfig,
+        egConfig = effect.opts.graphablesConfig,
         gFlags = ParticleEffect.GRAPHABLE_FLAGS,
         cConfig = this.channelConfig,
         cFlags = ParticleEffect.CHANNEL_FLAGS,

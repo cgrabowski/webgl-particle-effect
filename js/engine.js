@@ -1,4 +1,4 @@
-function engine (canvas, emittersOpts, engineCallback) {
+function engine (canvas, effectOpts, emittersOpts, engineCallback) {
 
     if (!canvas) {
         canvas = document.createElement('canvas');
@@ -22,7 +22,10 @@ function engine (canvas, emittersOpts, engineCallback) {
         renderer = new THREE.WebGLRenderer({canvas: canvas}),
     controls = new THREE.TrackballControls(camera, canvas);
 
-    effect = new ParticleEffect(gl, {camera: camera}, emittersOpts, effectCallback);
+    effectOpts = effectOpts || {};
+    effectOpts.camera = camera;
+
+    effect = new ParticleEffect(gl, effectOpts, emittersOpts, effectCallback);
 
     controls.rotateSpeed = 1.0;
     controls.zoomSpeed = 10;
@@ -59,6 +62,7 @@ function engine (canvas, emittersOpts, engineCallback) {
     function effectCallback () {
         scene.add(effect);
         renderer.addPostPlugin(effect);
+        render();
         if (engineCallback) {
             engineCallback(effect, render);
         } else {

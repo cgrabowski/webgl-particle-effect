@@ -14,8 +14,7 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
     this.vShader = effectOpts.vShader || ParticleEffect.defaultVertexShader();
     this.fShader = effectOpts.fShader || ParticleEffect.defaultFragmentShader();
     this.shaderSourceType = effectOpts.shaderSourceType || 'array';
-    this.graphablesConfig = effectOpts.graphablesConfig || 0;
-    this.channelConfig = effectOpts.channelConfig || 0;
+    this.opts.graphablesConfig = effectOpts.graphablesConfig || 0;
     this.emitters = [];
     this.textureSources = [];
     this.oldTime = 0;
@@ -177,11 +176,11 @@ ParticleEffect.GRAPHABLE_FLAGS = {
 };
 
 ParticleEffect.prototype.enableGraphed = function (bitmask) {
-    this.graphablesConfig |= bitmask;
+    this.opts.graphablesConfig |= bitmask;
 };
 
 ParticleEffect.prototype.disableGraphed = function (bitmask) {
-    this.graphablesConfig = ~(~this.graphablesConfig | bitmask);
+    this.opts.graphablesConfig = ~(~this.graphablesConfig | bitmask);
 };
 
 ParticleEffect.prototype.getEnabledGraphed = function () {
@@ -189,7 +188,7 @@ ParticleEffect.prototype.getEnabledGraphed = function () {
         i = 0;
 
     for (var flag in ParticleEffect.GRAPHABLE_FLAGS) {
-        if (ParticleEffect.GRAPHABLE_FLAGS[flag] & this.graphablesConfig) {
+        if (ParticleEffect.GRAPHABLE_FLAGS[flag] & this.opts.graphablesConfig) {
             var str = flag.toLowerCase().substr(0, flag.length - 4);
             if (str.match(/[xyz]$/)) {
                 str = str.substr(0, str.length - 1) + str.substr(-1).toUpperCase();
@@ -217,11 +216,11 @@ ParticleEffect.CHANNEL_FLAGS = {
 };
 
 ParticleEffect.prototype.useOwnChannel = function (bitmask) {
-    this.channelConfig |= bitmask;
+    this.opts.channelConfig |= bitmask;
 };
 
 ParticleEffect.prototype.useMasterChannel = function (bitmask) {
-    this.channelConfig = ~(~this.channelConfig | bitmask);
+    this.opts.channelConfig = ~(~this.channelConfig | bitmask);
 };
 
 ParticleEffect.prototype.getUsingOwnChannel = function () {
@@ -229,7 +228,7 @@ ParticleEffect.prototype.getUsingOwnChannel = function () {
         i = 0;
 
     for (var flag in ParticleEffect.GRAPHABLE_FLAGS) {
-        if (ParticleEffect.GRAPHABLE_FLAGS[flag] & this.channelConfig) {
+        if (ParticleEffect.GRAPHABLE_FLAGS[flag] & this.opts.channelConfig) {
             var str = flag.toLowerCase().substr(0, flag.length - 4);
             if (str.match(/[xyz]$/)) {
                 str = str.substr(0, str.length - 1) + str.substr(-1).toUpperCase();
@@ -249,68 +248,67 @@ ParticleEffect.shaderManager = function (gl) {
         activeProgramHandle;
 
     return function (method) {
-        switch (method) {
 
-            case ('createProgram'):
-                return function (vertex, fragment, sourceType) {
-                    var fragmentShader,
-                        vertexShader,
-                        prog = gl.createProgram();
-                    sourceType = sourceType.toLowerCase();
-                    if (sourceType === 'html') {
-                        vertexShader = getShaderFromHTML(gl, vertex);
-                        fragmentShader = getShaderFromHTML(gl, fragment);
-                    } else if (sourceType === 'string') {
-                        vertexShader = getshaderFromString(gl, vertex, 'vertex');
-                        fragmentShader = getShaderFromString(gl, fragment, 'fragment');
-                    } else if (sourceType === 'array') {
-                        vertexShader = getShaderFromArray(gl, vertex, 'vertex');
-                        fragmentShader = getShaderFromArray(gl, fragment, 'fragment');
-                    } else {
-                        throw new Error('sourceType parameter must be "html", "string", or "array"');
-                    }
+        if (method === 'createProgram') {
+            return function (vertex, fragment, sourceType) {
+                var fragmentShader,
+                    vertexShader,
+                    prog = gl.createProgram();
+                sourceType = sourceType.toLowerCase();
+                if (sourceType === 'html') {
+                    vertexShader = getShaderFromHTML(gl, vertex);
+                    fragmentShader = getShaderFromHTML(gl, fragment);
+                } else if (sourceType === 'string') {
+                    vertexShader = getshaderFromString(gl, vertex, 'vertex');
+                    fragmentShader = getShaderFromString(gl, fragment, 'fragment');
+                } else if (sourceType === 'array') {
+                    vertexShader = getShaderFromArray(gl, vertex, 'vertex');
+                    fragmentShader = getShaderFromArray(gl, fragment, 'fragment');
+                } else {
+                    throw new Error('sourceType parameter must be "html", "string", or "array"');
+                }
 
-                    gl.attachShader(prog, vertexShader);
-                    gl.attachShader(prog, fragmentShader);
-                    gl.linkProgram(prog);
-                    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-                        throw new Error("Could not initialize shaders");
-                    }
-                    gl.useProgram(prog);
-                    prog.vertexPositionAttribute = gl.getAttribLocation(prog, "aVertexPosition");
-                    gl.enableVertexAttribArray(prog.vertexPositionAttribute);
-                    prog.textureCoordAttribute = gl.getAttribLocation(prog, "aTextureCoord");
-                    gl.enableVertexAttribArray(prog.textureCoordAttribute);
-                    prog.mvpProjectionMatrixUniform = gl.getUniformLocation(prog, "uMVPMatrix");
-                    prog.samplerUniform = gl.getUniformLocation(prog, "uSampler");
-                    programs.push(prog);
-                    vertexShaders.push(vertexShader);
-                    fragmentShaders.push(fragmentShader);
-                    return programs.length - 1;
-                };
+                gl.attachShader(prog, vertexShader);
+                gl.attachShader(prog, fragmentShader);
+                gl.linkProgram(prog);
+                if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+                    throw new Error("Could not initialize shaders");
+                }
+                gl.useProgram(prog);
+                prog.vertexPositionAttribute = gl.getAttribLocation(prog, "aVertexPosition");
+                gl.enableVertexAttribArray(prog.vertexPositionAttribute);
+                prog.textureCoordAttribute = gl.getAttribLocation(prog, "aTextureCoord");
+                gl.enableVertexAttribArray(prog.textureCoordAttribute);
+                prog.mvpProjectionMatrixUniform = gl.getUniformLocation(prog, "uMVPMatrix");
+                prog.samplerUniform = gl.getUniformLocation(prog, "uSampler");
+                programs.push(prog);
+                vertexShaders.push(vertexShader);
+                fragmentShaders.push(fragmentShader);
+                return programs.length - 1;
+            };
 
-            case ('useProgram'):
-                return function (index) {
-                    gl.useProgram(programs[index]);
-                    activeProgramHandle = index;
-                    return programs[index];
-                };
+        } else if (method === 'useProgram') {
+            return function (index) {
+                gl.useProgram(programs[index]);
+                activeProgramHandle = index;
+                return programs[index];
+            };
 
-            case ('getShaderVariable'):
-                return function (string) {
-                    return programs[activeProgramHandle][string];
-                };
+        } else if (method === 'getShaderVariable') {
+            return function (string) {
+                return programs[activeProgramHandle][string];
+            };
 
-            case ('dispose'):
-                return function () {
-                    for (var i = 0; i < programs.length; i++) {
-                        gl.deleteProgram(programs[i]);
-                    }
-                    vertexShaders = fragmentShaders = programs = null;
-                };
+        } else if (method === 'dispose') {
+            return function () {
+                for (var i = 0; i < programs.length; i++) {
+                    gl.deleteProgram(programs[i]);
+                }
+                vertexShaders = fragmentShaders = programs = null;
+            };
 
-            default:
-                throw new Error('shaderManager\'s argument must be a method name: createProgram or dispose');
+        } else {
+            throw new Error('shaderManager\'s argument must be a method name: createProgram or dispose');
         }
     };
 
@@ -403,49 +401,48 @@ ParticleEffect.textureManager = function (gl) {
     }
 
     return function (method) {
-        switch (method) {
 
-            case ('add'):
-                return function (images) {
-                    if (!typeof(images) === 'array') {
-                        textures.push(createTexture(images));
-                        return textures.length - 1;
-                    } else {
-                        var firstHandle = textures.length;
-                        for (var i = 0; i < images.length; i++) {
-                            textures.push(createTexture(images[i]));
-                        }
-                        return firstHandle;
+        if (method === 'add') {
+            return function (images) {
+                if (!typeof(images) === 'array') {
+                    textures.push(createTexture(images));
+                    return textures.length - 1;
+                } else {
+                    var firstHandle = textures.length;
+                    for (var i = 0; i < images.length; i++) {
+                        textures.push(createTexture(images[i]));
                     }
-                };
-            case ('bind'):
-                return function (index) {
-                    return function () {
-                        gl.bindTexture(gl.TEXTURE_2D, textures[index]);
-                    };
-                };
-            case ('remove'):
-                return function (index) {
-                    gl.deleteTexture(textures[index]);
-                    textures.splice(index, 1);
-                };
-            case ('replace'):
-                return function (image, index) {
-                    var oldTexture = textures[index];
-                    textures[index] = createTexture(image);
-                    gl.deleteTexture(oldTexture);
-                    return textures[index];
-                };
-            case ('dispose'):
+                    return firstHandle;
+                }
+            };
+        } else if (method === 'bind') {
+            return function (index) {
                 return function () {
-                    for (var i = 0; i < textures.length; i++) {
-                        ;
-                        gl.deleteTexture(textures[i]);
-                    }
-                    textures = null;
+                    gl.bindTexture(gl.TEXTURE_2D, textures[index]);
                 };
-            default:
-                throw new Error('textureManager\'s argument must be a method name: init, add, get, remove, replace, or dispose');
+            };
+        } else if (method === 'remove') {
+            return function (index) {
+                gl.deleteTexture(textures[index]);
+                textures.splice(index, 1);
+            };
+        } else if (method === 'replace') {
+            return function (image, index) {
+                var oldTexture = textures[index];
+                textures[index] = createTexture(image);
+                gl.deleteTexture(oldTexture);
+                return textures[index];
+            };
+        } else if (method === 'dispose') {
+            return function () {
+                for (var i = 0; i < textures.length; i++) {
+                    ;
+                    gl.deleteTexture(textures[i]);
+                }
+                textures = null;
+            };
+        } else {
+            throw new Error('textureManager\'s argument must be a method name: init, add, get, remove, replace, or dispose');
         }
     };
 
