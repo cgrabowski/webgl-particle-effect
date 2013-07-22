@@ -1,9 +1,13 @@
 function ParticleEmitter (effect, opts, index) {
     var rp = ParticleEmitter.randlerp;
-    this.effect = effect || null;
-    for (var opt in opts) {
-        if (opt === 'emitterName') {
-            this.emitterName = opts.emitterName || ((index) ? "emitter " + index : "unnamed");
+
+    opts = opts || {};
+
+    this.emitterName = opts.emitterName || ((index) ? "emitter " + index : "unnamed");
+
+    for (var opt in ParticleEmitter.defaultOpts) {
+        if (!opts[opt]) {
+            opts[opt] = ParticleEmitter.defaultOpts[opt];
         }
     }
 
@@ -14,6 +18,7 @@ function ParticleEmitter (effect, opts, index) {
         }
     }
 
+    this.effect = effect || null;
     this.opts.graphablesConfig = opts.graphablesConfig || 0;
     this.opts.channelConfig = opts.channelConfig || 0;
     this._matrix = mat4.create();
@@ -49,12 +54,48 @@ function ParticleEmitter (effect, opts, index) {
     }
 }
 
+ParticleEmitter.defaultOpts = {
+    emitterName: "default",
+    textSource: "images/particle.png",
+    numParticles: 200,
+    //
+    minLife: 4000,
+    maxLife: 6000,
+    //
+    minDelay: 0,
+    maxDelay: 500,
+    //
+    minOffsetX: -2,
+    maxOffsetX: 2,
+    //
+    minOffsetY: -1,
+    maxOffsetY: 1,
+    //
+    minOffsetZ: -10,
+    maxOffsetZ: -9,
+    //
+    minSpeed: 100,
+    maxSpeed: 500,
+    //
+    minDirectionX: 0,
+    maxDirectionX: 0,
+    //
+    minDirectionY: 1,
+    maxDirectionY: 1,
+    //
+    minDirectionZ: 0,
+    maxDirectionZ: 0,
+    //
+    minRotation: 180,
+    maxRotation: 540
+};
+
 ParticleEmitter.prototype = Object.create(ParticleEffect.prototype);
 ParticleEmitter.prototype.constructor = ParticleEmitter;
 
 ParticleEmitter.prototype.render = function (delta) {
     var effect = this.effect,
-        effectOpts = effect.opts,
+        effectOpts = (effect.opts) ? effect.opts : {},
         gl = effect.gl,
         text = this.texture,
         getShaderVar = effect.shaderManager('getShaderVariable'),
@@ -88,7 +129,7 @@ ParticleEmitter.prototype.render = function (delta) {
         randoms = this.randoms,
         baseArray = ParticleEffect.BASE_GRAPH_ARRAY,
         gConfig = this.graphablesConfig,
-        egConfig = effect.opts.graphablesConfig,
+        egConfig = effectOpts.graphablesConfig || 0,
         gFlags = ParticleEffect.GRAPHABLE_FLAGS,
         cConfig = this.channelConfig,
         cFlags = ParticleEffect.CHANNEL_FLAGS,

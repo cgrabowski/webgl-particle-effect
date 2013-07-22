@@ -64,7 +64,7 @@ function engine (canvas, effectOpts, emittersOpts, engineCallback) {
         renderer.addPostPlugin(effect);
         render();
         if (engineCallback) {
-            engineCallback(effect, render);
+            engineCallback(gl, effect, render);
         } else {
             render();
         }

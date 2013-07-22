@@ -24,82 +24,37 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
     this.programHandle = this.shaderManager('createProgram')(this.vShader, this.fShader, this.shaderSourceType);
     this.useProgram = this.shaderManager('useProgram');
 
+    for (var opt in ParticleEmitter.defaultOpts) {
+        if (!this.opts.hasOwnProperty(opt)) {
+            this.opts[opt] = ParticleEmitter.defaultOpts[opt];
+        }
+    }
+
     window.addEventListener('unload', function (event) {
         self.textureManager('dispose')();
         self.shaderManager('dispose')();
     });
 
-    var defaultEmittersOpts = [{
-            emitterName: "default",
-            textSource: "particle.png",
-            numParticles: 200,
-            //
-            minLife: 4000,
-            maxLife: 6000,
-            //
-            minDelay: 0,
-            maxDelay: 500,
-            //
-            minOffsetX: -2,
-            maxOffsetX: 2,
-            //
-            minOffsetY: -1,
-            maxOffsetY: 1,
-            //
-            minOffsetZ: -10,
-            maxOffsetZ: -9,
-            //
-            minSpeed: 100,
-            maxSpeed: 500,
-            //
-            minDirectionX: 0,
-            maxDirectionX: 0,
-            //
-            minDirectionY: 1,
-            maxDirectionY: 1,
-            //
-            minDirectionZ: 0,
-            maxDirectionZ: 0,
-            //
-            minRotation: 180,
-            maxRotation: 540
-        }, {
-            "emitterName": "emitter 0",
-            "textSource": "igimg/plasma32-1.png"
-        }, {
-            "emitterName": "emitter 1",
-            "textSource": "igimg/plasma32-2.png"
-        }, {
-            "emitterName": "emitter 2",
-            "textSource": "igimg/plasma32-3.png"
-        }, {
-            "emitterName": "emitter 3",
-            "textSource": "igimg/plasma32-12.png"
-        }];
+    var defaultEmittersOpts = ParticleEmitter.defaultOpts;
 
     if (emittersOpts) {
-        for (var i = 1; i < emittersOpts.length; i++) {
-            for (var opt in defaultEmittersOpts[i]) {
-                emittersOpts[i][opt] = emittersOpts[i][opt] ||
-                    emittersOpts[0][opt] ||
-                    defaultEmittersOpts[i][opt] ||
-                    defaultEmittersOpts[0][opt];
+        for (var i = 0; i < emittersOpts.length; i++) {
+            for (var opt in defaultEmittersOpts) {
+                emittersOpts[i][opt] = emittersOpts[i][opt] || defaultEmittersOpts[opt];
             }
+            emittersOpts[i].textSource = emittersOpts[i].textSource || ParticleEffect.defaultTextures[i];
         }
-
-        emittersOpts.splice(0, 1);
 
     } else {
-        emittersOpts = defaultEmittersOpts;
-        for (var opt in emittersOpts[0]) {
-            for (var i = 1; i < emittersOpts.length; i++) {
-                emittersOpts[i][opt] = emittersOpts[i][opt] ||
-                    emittersOpts[0][opt];
+        emittersOpts = [];
+        console.log(defaultEmittersOpts);
+        for (var i = 0; i < 4; i++) {
+            emittersOpts[i] = {};
+            for (var opt in defaultEmittersOpts) {
+                emittersOpts[i][opt] = defaultEmittersOpts[opt];
+                emittersOpts[i].textSource = ParticleEffect.defaultTextures[i];
             }
         }
-
-        emittersOpts.splice(0, 1);
-
     }
 
     for (var i = 0; i < emittersOpts.length; i++) {
@@ -117,7 +72,12 @@ function ParticleEffect (gl, effectOpts, emittersOpts, callback) {
                 onImagesLoaded();
             }
         }
-        images[i].src = self.textureSources[i];
+
+        try {
+            images[i].src = self.textureSources[i];
+        } catch (e) {
+            console.error(e.message);
+        }
     }
 
     function onImagesLoaded () {
@@ -158,6 +118,8 @@ ParticleEffect.prototype.render = function () {
 
 ParticleEffect.prototype.init = function () {
 };
+
+ParticleEffect.defaultTextures = ['igimg/plasma32-1.png', 'igimg/plasma32-2.png', 'igimg/plasma32-3.png', 'igimg/plasma32-12.png'];
 
 ParticleEffect.GRAPHABLES = ['offsetX', 'offsetY', 'offsetZ', 'speed', 'directionX', 'directionY', 'directionZ', 'rotation'];
 
