@@ -1,94 +1,55 @@
-function ParticleEmitter (effect, opts, index) {
-    var rp = ParticleEmitter.randlerp;
+ParticleEmitter = (function (window, undefined) {
 
-    opts = opts || {};
+    return function (effect, opts, index) {
 
-    this.emitterName = opts.emitterName || ((index) ? "emitter " + index : "unnamed");
+        var rp = ParticleEmitter.randlerp;
 
-    for (var opt in ParticleEmitter.defaultOpts) {
-        if (!opts[opt]) {
-            opts[opt] = ParticleEmitter.defaultOpts[opt];
+        this.opts = opts || {};
+
+        this.emitterName = this.opts.emitterName = opts.emitterName || (index) ? 'emitter ' + index : 'emitter ' + effect.emitters.length;
+
+        for (var opt in ParticleEffect.DEFAULT_OPTS) {
+            if (!this.opts[opt]) {
+                this.opts[opt] = ParticleEffect.DEFAULT_OPTS[opt];
+            }
+        }
+
+        this.effect = effect || null;
+        this.opts.graphablesConfig = opts.graphablesConfig || 0;
+        this.opts.channelConfig = opts.channelConfig || 0;
+        this._matrix = mat4.create();
+        this.mMatrix = effect.matrix.elements;
+        this.vMatrix = effect.camera.matrixWorld.elements;
+        this.pMatrix = effect.camera.projectionMatrix.elements;
+        this.lives = [];
+        this.lifeElapsed = [];
+        this.starts = [];
+        this.directions = [];
+        this.speeds = [];
+        this.rotations = [];
+        this.randoms = [];
+        this.vertices = [-0.1, -0.1, 0.1, 0.1, -0.1, 0.1, 0.1, 0.1, 0.1, -0.1, 0.1, 0.1];
+        this.textCoords = [0, 0, 1, 0, 1, 1, 0, 1];
+        this.indices = [0, 1, 2, 0, 2, 3];
+        for (i = 0; i < opts.numParticles; i++) {
+            this.lives.push(rp(opts.minLife, opts.maxLife, true));
+            this.lifeElapsed.push(-rp(opts.minDelay, opts.maxDelay, true));
+            this.starts.push(rp(opts.minOffsetX, opts.maxOffsetX), rp(opts.minOffsetY, opts.maxOffsetY), rp(opts.minOffsetZ, opts.maxOffsetZ));
+            this.directions.push(rp(opts.minDirectionX, opts.maxDirectionX), rp(opts.minDirectionY, this.maxDirectionY), rp(opts.minDirectionZ, opts.maxDirectionZ));
+            this.speeds.push(rp(opts.minSpeed, opts.maxSpeed));
+            this.rotations.push(rp(opts.minRotation, opts.maxRotation));
+            this.randoms.push(Math.random());
+        }
+        this.vertId = opts.vertId || null;
+        this.fragId = opts.fragId || null;
+        if (opts.vertId && opts.fragId) {
+            this.createShaderProgram(effect.gl, opts.VertId, opts.FragId);
+        } else {
+            this.shaderProgram = effect.shaderProgram;
+            this.initBuffers();
         }
     }
-
-    this.opts = {};
-    for (var opt in opts) {
-        if (typeof opts[opt] !== 'undefined') {
-            this.opts[opt] = opts[opt];
-        }
-    }
-
-    this.effect = effect || null;
-    this.opts.graphablesConfig = opts.graphablesConfig || 0;
-    this.opts.channelConfig = opts.channelConfig || 0;
-    this._matrix = mat4.create();
-    this.mMatrix = effect.matrix.elements;
-    this.vMatrix = effect.camera.matrixWorld.elements;
-    this.pMatrix = effect.camera.projectionMatrix.elements;
-    this.lives = [];
-    this.lifeElapsed = [];
-    this.starts = [];
-    this.directions = [];
-    this.speeds = [];
-    this.rotations = [];
-    this.randoms = []
-    this.vertices = [-0.1, -0.1, 0.1, 0.1, -0.1, 0.1, 0.1, 0.1, 0.1, -0.1, 0.1, 0.1];
-    this.textCoords = [0, 0, 1, 0, 1, 1, 0, 1];
-    this.indices = [0, 1, 2, 0, 2, 3];
-    for (i = 0; i < opts.numParticles; i++) {
-        this.lives.push(rp(opts.minLife, opts.maxLife, true));
-        this.lifeElapsed.push(-rp(opts.minDelay, opts.maxDelay, true));
-        this.starts.push(rp(opts.minOffsetX, opts.maxOffsetX), rp(opts.minOffsetY, opts.maxOffsetY), rp(opts.minOffsetZ, opts.maxOffsetZ));
-        this.directions.push(rp(opts.minDirectionX, opts.maxDirectionX), rp(opts.minDirectionY, this.maxDirectionY), rp(opts.minDirectionZ, opts.maxDirectionZ));
-        this.speeds.push(rp(opts.minSpeed, opts.maxSpeed));
-        this.rotations.push(rp(opts.minRotation, opts.maxRotation));
-        this.randoms.push(Math.random());
-    }
-    this.vertId = opts.vertId || null;
-    this.fragId = opts.fragId || null;
-    if (opts.vertId && opts.fragId) {
-        this.createShaderProgram(effect.gl, opts.VertId, opts.FragId);
-    } else {
-        this.shaderProgram = effect.shaderProgram;
-        this.initBuffers();
-    }
-}
-
-ParticleEmitter.defaultOpts = {
-    emitterName: "default",
-    textSource: "images/particle.png",
-    numParticles: 200,
-    //
-    minLife: 4000,
-    maxLife: 6000,
-    //
-    minDelay: 0,
-    maxDelay: 500,
-    //
-    minOffsetX: -2,
-    maxOffsetX: 2,
-    //
-    minOffsetY: -1,
-    maxOffsetY: 1,
-    //
-    minOffsetZ: -10,
-    maxOffsetZ: -9,
-    //
-    minSpeed: 100,
-    maxSpeed: 500,
-    //
-    minDirectionX: 0,
-    maxDirectionX: 0,
-    //
-    minDirectionY: 1,
-    maxDirectionY: 1,
-    //
-    minDirectionZ: 0,
-    maxDirectionZ: 0,
-    //
-    minRotation: 180,
-    maxRotation: 540
-};
+}(window));
 
 ParticleEmitter.prototype = Object.create(ParticleEffect.prototype);
 ParticleEmitter.prototype.constructor = ParticleEmitter;
@@ -98,7 +59,7 @@ ParticleEmitter.prototype.render = function (delta) {
         effectOpts = (effect.opts) ? effect.opts : {},
         gl = effect.gl,
         text = this.texture,
-        getShaderVar = effect.shaderManager('getShaderVariable'),
+        getShaderVar = this.getShaderManager()('getShaderVariable'),
         mvpProjectionMatrixUniform = getShaderVar('mvpProjectionMatrixUniform'),
         vertexPositionAttribute = getShaderVar('vertexPositionAttribute'),
         textureCoordAttribute = getShaderVar('textureCoordAttribute'),
@@ -108,17 +69,47 @@ ParticleEmitter.prototype.render = function (delta) {
         vMatrix = this.vMatrix,
         pMatrix = this.pMatrix,
         opts = this.opts,
-        numParticles = opts.numParticles,
-        minLife = opts.minLife,
-        maxLife = opts.maxLife,
-        minDelay = opts.minDelay,
-        maxDelay = opts.maxDelay,
-        minDirectionX = opts.minDirectionX,
-        maxDirectionX = opts.maxDirectionX,
-        minDirectionY = opts.minDirectionY,
-        maxDirectionY = opts.maxDirectionY,
-        minDirectionZ = opts.minDirectionZ,
-        maxDirectionZ = opts.maxDirectionZ,
+        //
+        gConfig = this.graphablesConfig,
+        cConfig = this.channelConfig,
+        egConfig = effectOpts.graphablesConfig || 0,
+        gFlags = ParticleEffect.GRAPHABLE_FLAGS,
+        cFlags = ParticleEffect.CHANNEL_FLAGS,
+        //
+        numParticles = (cFlags['NUMPARTICLES_BIT'] & this.channelConfig) ? opts.numParticles : effectOpts.numParticles,
+        //
+        minLife = (cFlags['LIFE_BIT'] & cConfig) ? opts.minLife : effectOpts.minLife,
+        //
+        maxLife = (cFlags['LIFE_BIT'] & cConfig) ? opts.maxLife : effectOpts.maxLife,
+        //
+        minDelay = (cFlags['DELAY_BIT'] & cConfig) ? opts.minDelay : effectOpts.minDelay,
+        //
+        maxDelay = (cFlags['DELAY_BIT'] & cConfig) ? opts.maxDelay : effectOpts.maxDelay,
+        //
+        minDirectionX = (cFlags['DIRECTIONX_BIT'] & cConfig) ? opts.minDirectionX : effectOpts.minDirectionX,
+        //   
+        maxDirectionX = (cFlags['DIRECTIONX_BIT'] & cConfig) ? opts.maxDirectionX : effectOpts.maxDirectionX,
+        //
+        minDirectionY = (cFlags['DIRECTIONY_BIT'] & cConfig) ? opts.minDirectionY : effectOpts.minDirectionY,
+        //
+        maxDirectionY = (cFlags['DIRECTIONY_BIT'] & cConfig) ? opts.maxDirectionY : effectOpts.maxDirectionY,
+        //
+        minDirectionZ = (cFlags['DIRECTIONZ_BIT'] & cConfig) ? opts.minDirectionZ : effectOpts.minDirectionZ,
+        //
+        maxDirectionZ = (cFlags['DIRECTIONZ_BIT'] & cConfig) ? opts.maxDirectionZ : effectOpts.maxDirectionZ,
+        //
+        minOffsetX = (cFlags['OFFSETX_BIT'] & cConfig) ? opts.maxDirectionZ : effectOpts.maxDirectionZ,
+        //
+        maxOffsetX = (cFlags['OFFSETX_BIT'] & cConfig) ? opts.maxDirectionZ : effectOpts.maxDirectionZ,
+        //
+        minOffsetY = (cFlags['OFFSETY_BIT'] & cConfig) ? opts.maxDirectionZ : effectOpts.maxDirectionZ,
+        //
+        maxOffsetY = (cFlags['OFFSETY_BIT'] & cConfig) ? opts.maxDirectionZ : effectOpts.maxDirectionZ,
+        //
+        minOffsetZ = (cFlags['OFFSETZ_BIT'] & cConfig) ? opts.maxDirectionZ : effectOpts.maxDirectionZ,
+        //
+        maxOffsetZ = (cFlags['OFFSETZ_BIT'] & cConfig) ? opts.maxDirectionZ : effectOpts.maxDirectionZ,
+        //
         lives = this.lives,
         elapsed = this.lifeElapsed,
         lifeLen = this.lives.length,
@@ -127,12 +118,8 @@ ParticleEmitter.prototype.render = function (delta) {
         directions = this.directions,
         rotations = this.rotations,
         randoms = this.randoms,
+        //
         baseArray = ParticleEffect.BASE_GRAPH_ARRAY,
-        gConfig = this.graphablesConfig,
-        egConfig = effectOpts.graphablesConfig || 0,
-        gFlags = ParticleEffect.GRAPHABLE_FLAGS,
-        cConfig = this.channelConfig,
-        cFlags = ParticleEffect.CHANNEL_FLAGS,
         rp = ParticleEmitter.randlerp,
         m4 = mat4,
         //
@@ -179,8 +166,6 @@ ParticleEmitter.prototype.render = function (delta) {
         maxDirectionZGraph = effectOpts.maxDirectionZGraph || baseArray;
     }
 
-
-
     if (cConfig & cFlags.OFFSETX_BIT && gConfig & gFlags.OFFSETX_BIT) {
         minOffsetXGraph = opts.minOffsetXGraph || baseArray;
         maxOffsetXGraph = opts.maxOffsetXGraph || baseArray;
@@ -204,8 +189,6 @@ ParticleEmitter.prototype.render = function (delta) {
         minOffsetZGraph = effectOpts.minOffsetZGraph || baseArray;
         maxOffsetZGraph = effectOpts.maxOffsetZGraph || baseArray;
     }
-
-
 
     if (cConfig & cFlags.SPEED_BIT && gConfig & gFlags.SPEED_BIT) {
         minSpeedGraph = opts.minSpeedGraph || baseArray;
@@ -238,12 +221,13 @@ ParticleEmitter.prototype.render = function (delta) {
             elapsed[i] = (-rp(minDelay, maxDelay));
             // determine a new directional vector;
             directions.splice(i * 3, 3, rp(minDirectionX, maxDirectionX), rp(minDirectionY, maxDirectionY), rp(minDirectionZ, maxDirectionZ));
+
             speeds[i] = rp(opts.minSpeed, opts.maxSpeed);
             rotations[i] = rp(opts.minRotation, opts.maxRotation);
             randoms[i] = Math.random();
         }
 
-        //[V x1, y1, null, null, x2, y2, m, b, V x2, y2, m, b, [...]]
+        //[x1, y1, minLimit, maxLimit, x2, y2, m(1, 2), b(1, 2), x3, y3, m(2, 3), b(2, 3)[, ...]]
 
         // direction X
         if (minDirectionXGraph) {
@@ -251,15 +235,23 @@ ParticleEmitter.prototype.render = function (delta) {
                 max,
                 k = 0;
 
+            // find the minline line segment at the current life value
             while (elapsed[i] / lives[i] > minDirectionXGraph[k + 4]) {
                 k += 4;
             }
-            min = minDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionXGraph[k + 7];
+
+            // minline y-axis value for the line segment -- [k + 6] is the slope, [k + 7] is the y-intercept
+            min = ((minDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionXGraph[k + 7]) + 1) * 0.5 * (maxDirectionX - minDirectionX);
+
+            // find the maxline line segment at the current life value
             k = 0;
             while (elapsed[i] / lives[i] > maxDirectionXGraph[k + 4]) {
                 k += 4;
             }
-            max = maxDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionXGraph[k + 7];
+
+            // maxline y-axis value for the line segment -- [k + 6] is the slope, [k + 7] is the y-intercept
+            max = ((maxDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionXGraph[k + 7]) + 1) * 0.5 * (maxDirectionX - minDirectionX);
+            // check for NaN
             if (max < Infinity && min < Infinity) {
 
                 directions[i * 3] = ParticleEmitter.lerp(min, max, randoms[i]);
@@ -316,12 +308,12 @@ ParticleEmitter.prototype.render = function (delta) {
             while (elapsed[i] / lives[i] > minOffsetXGraph[k + 4]) {
                 k += 4;
             }
-            min = minOffsetXGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetXGraph[k + 7];
+            min = ((minOffsetXGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetXGraph[k + 7]) + 1) * 0.5 * (minOffsetXGraph[2] - minOffsetXGraph[3]);
             k = 0;
             while (elapsed[i] / lives[i] > maxOffsetXGraph[k + 4]) {
                 k += 4;
             }
-            max = maxOffsetXGraph[k + 6] * (elapsed[i] / lives[i]) + maxOffsetXGraph[k + 7];
+            max = ((maxOffsetXGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetXGraph[k + 7]) + 1) * 0.5 * (maxOffsetXGraph[2] - maxOffsetXGraph[3]);
             if (max < Infinity && min < Infinity) {
 
                 starts[i * 3] = ParticleEmitter.lerp(min, max, randoms[i]);
