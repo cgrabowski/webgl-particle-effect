@@ -1,28 +1,29 @@
-ParticleEmitter = (function (window, undefined) {
+var PEE = PEE || {};
+
+PEE.ParticleEmitter = (function (window, undefined) {
 
     return function (effect, opts, index) {
 
-        var rp = ParticleEmitter.randlerp;
+        var rp = PEE.ParticleEmitter.randterp;
 
         this.opts = opts || {};
 
         this.emitterName = this.opts.emitterName = opts.emitterName || (index) ? 'emitter ' + index : 'emitter ' + effect.emitters.length;
 
         var graphableRegex = new RegExp(/^(min|max)(?=(Offset[X-Z]|Direction[X-Z]|Speed|Rotation)$)/),
-            limits = ParticleEffect.OPTS_LIMITS;
+            limits = PEE.ParticleEffect.OPTS_LIMITS;
 
-        for (var opt in ParticleEffect.DEFAULT_OPTS) {
+        for (var opt in PEE.ParticleEffect.DEFAULT_OPTS) {
             if (!this.opts[opt]) {
-                this.opts[opt] = ParticleEffect.DEFAULT_OPTS[opt];
+                this.opts[opt] = PEE.ParticleEffect.DEFAULT_OPTS[opt];
 
             }
             if (!this.opts.hasOwnProperty(opt + 'Graph') && graphableRegex.test(opt)) {
-                this.opts[opt + 'Graph'] = ParticleEffect.BASE_GRAPH_ARRAY.slice();
+                this.opts[opt + 'Graph'] = PEE.ParticleEffect.BASE_GRAPH_ARRAY.slice();
                 // cut off the 'min' or 'max' and then
                 // change the first char to lower case
                 this.opts[opt + "Graph"][2] = limits[opt.substr(3, 1).toLowerCase() + opt.substr(4)][0];
                 this.opts[opt + "Graph"][3] = limits[opt.substr(3, 1).toLowerCase() + opt.substr(4)][1];
-
             }
         }
         // non-graphable opts
@@ -79,10 +80,10 @@ ParticleEmitter = (function (window, undefined) {
     }
 }(window));
 
-ParticleEmitter.prototype = Object.create(ParticleEffect.prototype);
-ParticleEmitter.prototype.constructor = ParticleEmitter;
+PEE.ParticleEmitter.prototype = Object.create(PEE.ParticleEffect.prototype);
+PEE.ParticleEmitter.prototype.constructor = PEE.ParticleEmitter;
 
-ParticleEmitter.prototype.render = function (delta) {
+PEE.ParticleEmitter.prototype.render = function (delta) {
     var effect = this.effect,
         effectOpts = effect.opts,
         gl = effect.gl,
@@ -99,8 +100,8 @@ ParticleEmitter.prototype.render = function (delta) {
         gConfig = this.opts.graphablesConfig,
         cConfig = this.opts.channelConfig,
         egConfig = effectOpts.graphablesConfig || 0,
-        gFlags = ParticleEffect.GRAPHABLE_FLAGS,
-        cFlags = ParticleEffect.CHANNEL_FLAGS,
+        gFlags = PEE.ParticleEffect.GRAPHABLE_FLAGS,
+        cFlags = PEE.ParticleEffect.CHANNEL_FLAGS,
         lives = this.lives,
         elapsed = this.lifeElapsed,
         offsets = this.offsets,
@@ -455,7 +456,7 @@ ParticleEmitter.prototype.render = function (delta) {
     }
 };
 
-ParticleEmitter.prototype.initBuffers = function () {
+PEE.ParticleEmitter.prototype.initBuffers = function () {
     this.vertBuff = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuff);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.vertices), gl.STATIC_DRAW);
@@ -467,7 +468,7 @@ ParticleEmitter.prototype.initBuffers = function () {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.indices), gl.STATIC_DRAW);
 };
 
-ParticleEmitter.randlerp = function (min, max, rnd) {
+PEE.ParticleEmitter.randterp = function (min, max, rnd) {
     if (rnd) {
         return Math.round(Math.random() * (max - min) + min);
     } else {
@@ -475,7 +476,7 @@ ParticleEmitter.randlerp = function (min, max, rnd) {
     }
 };
 
-ParticleEmitter.lerp = function (min, max, factor, rnd) {
+PEE.ParticleEmitter.terp = function (min, max, factor, rnd) {
     if (rnd) {
         return Math.round(factor * (max - min) + min);
     } else {
@@ -483,7 +484,7 @@ ParticleEmitter.lerp = function (min, max, factor, rnd) {
     }
 };
 
-ParticleEmitter.srandlerp = function (min, max, rnd) {
+PEE.ParticleEmitter.srandterp = function (min, max, rnd) {
     if (rnd) {
         return Math.round(Math.random() * (max - min) + min);
     } else {

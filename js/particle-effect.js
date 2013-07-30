@@ -1,9 +1,11 @@
-ParticleEffect = (function (window, undefined) {
+var PEE = PEE || {};
+
+PEE.ParticleEffect = (function (window, undefined) {
 
     return function (gl, effectOpts, emittersOpts, callback) {
 
         if (!gl || !gl instanceof WebGLRenderingContext) {
-            throw new Error('ParticleEffect requires a valid gl context');
+            throw new Error('PEE.ParticleEffect requires a valid gl context');
         }
 
         if (THREE) {
@@ -14,8 +16,8 @@ ParticleEffect = (function (window, undefined) {
         this.gl = gl;
         this.opts = effectOpts = effectOpts || {};
         this.camera = effectOpts.camera || console.error('I need a camera!');
-        this.vShader = effectOpts.vShader || ParticleEffect.defaultVertexShader();
-        this.fShader = effectOpts.fShader || ParticleEffect.defaultFragmentShader();
+        this.vShader = effectOpts.vShader || PEE.ParticleEffect.defaultVertexShader();
+        this.fShader = effectOpts.fShader || PEE.ParticleEffect.defaultFragmentShader();
         this.shaderSourceType = effectOpts.shaderSourceType || 'array';
         this.opts.graphablesConfig = effectOpts.graphablesConfig || 0;
         this.emitters = [];
@@ -28,15 +30,15 @@ ParticleEffect = (function (window, undefined) {
         this.useProgram = this.shaderManager('useProgram');
 
         var graphableRegex = new RegExp(/^(min|max)(?=(Offset[X-Z]|Direction[X-Z]|Speed|Rotation)$)/),
-            limits = ParticleEffect.OPTS_LIMITS;
+            limits = PEE.ParticleEffect.OPTS_LIMITS;
 
-        for (var opt in ParticleEffect.DEFAULT_OPTS) {
+        for (var opt in PEE.ParticleEffect.DEFAULT_OPTS) {
             if (!this.opts.hasOwnProperty(opt)) {
-                this.opts[opt] = ParticleEffect.DEFAULT_OPTS[opt];
+                this.opts[opt] = PEE.ParticleEffect.DEFAULT_OPTS[opt];
             }
 
             if (!this.opts.hasOwnProperty(opt + "Graph") && graphableRegex.test(opt)) {
-                this.opts[opt + "Graph"] = ParticleEffect.BASE_GRAPH_ARRAY.slice();
+                this.opts[opt + "Graph"] = PEE.ParticleEffect.BASE_GRAPH_ARRAY.slice();
                 // cut off the 'min' or 'max' and then
                 // change the first char to lower case
                 this.opts[opt + "Graph"][2] = limits[opt.substr(3, 1).toLowerCase() + opt.substr(4)][0];
@@ -60,14 +62,14 @@ ParticleEffect = (function (window, undefined) {
             self.shaderManager('dispose')();
         });
 
-        var defaultOpts = ParticleEffect.DEFAULT_OPTS;
+        var defaultOpts = PEE.ParticleEffect.DEFAULT_OPTS;
 
         if (emittersOpts) {
             for (var i = 0; i < emittersOpts.length; i++) {
                 for (var opt in defaultOpts) {
                     emittersOpts[i][opt] = emittersOpts[i][opt] || defaultOpts[opt];
                 }
-                emittersOpts[i].textSource = emittersOpts[i].textSource || ParticleEffect.DEFAULT_TEXTURES[i];
+                emittersOpts[i].textSource = emittersOpts[i].textSource || PEE.ParticleEffect.DEFAULT_TEXTURES[i];
             }
 
         } else {
@@ -76,14 +78,14 @@ ParticleEffect = (function (window, undefined) {
                 emittersOpts[i] = {};
                 for (var opt in defaultOpts) {
                     emittersOpts[i][opt] = defaultOpts[opt];
-                    emittersOpts[i].textSource = ParticleEffect.DEFAULT_TEXTURES[i];
+                    emittersOpts[i].textSource = PEE.ParticleEffect.DEFAULT_TEXTURES[i];
                 }
             }
         }
 
         for (var i = 0; i < emittersOpts.length; i++) {
             self.textureSources[i] = emittersOpts[i].textSource;
-            self.emitters[i] = new ParticleEmitter(self, emittersOpts[i], i);
+            self.emitters[i] = new PEE.ParticleEmitter(self, emittersOpts[i], i);
         }
         var images = [],
             loaded = 0;
@@ -118,11 +120,11 @@ ParticleEffect = (function (window, undefined) {
 }(window));
 
 if (THREE) {
-    ParticleEffect.prototype = Object.create(THREE.Object3D.prototype);
-    ParticleEffect.prototype.constructor = ParticleEffect;
+    PEE.ParticleEffect.prototype = Object.create(THREE.Object3D.prototype);
+    PEE.ParticleEffect.prototype.constructor = PEE.ParticleEffect;
 }
 
-ParticleEffect.prototype.render = function () {
+PEE.ParticleEffect.prototype.render = function () {
 
     gl.enable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
@@ -141,10 +143,10 @@ ParticleEffect.prototype.render = function () {
     }
 };
 
-ParticleEffect.prototype.init = function () {
+PEE.ParticleEffect.prototype.init = function () {
 };
 
-ParticleEffect.DEFAULT_OPTS = {
+PEE.ParticleEffect.DEFAULT_OPTS = {
     emitterName: "default",
     textSource: "images/particle.png",
     numParticles: 200,
@@ -180,13 +182,13 @@ ParticleEffect.DEFAULT_OPTS = {
     maxRotation: 540
 };
 
-ParticleEffect.DEFAULT_TEXTURES = ['igimg/plasma32-1.png', 'igimg/plasma32-2.png', 'igimg/plasma32-3.png', 'igimg/plasma32-12.png'];
+PEE.ParticleEffect.DEFAULT_TEXTURES = ['igimg/plasma32-1.png', 'igimg/plasma32-2.png', 'igimg/plasma32-3.png', 'igimg/plasma32-12.png'];
 
-ParticleEffect.GRAPHABLES = ['offsetX', 'offsetY', 'offsetZ', 'speed', 'directionX', 'directionY', 'directionZ', 'rotation'];
+PEE.ParticleEffect.GRAPHABLES = ['offsetX', 'offsetY', 'offsetZ', 'speed', 'directionX', 'directionY', 'directionZ', 'rotation'];
 
-ParticleEffect.BASE_GRAPH_ARRAY = [0, -1, null, null, 1, 1, 2, -1];
+PEE.ParticleEffect.BASE_GRAPH_ARRAY = [0, -1, null, null, 1, 1, 2, -1];
 
-ParticleEffect.OPTS_LIMITS = {
+PEE.ParticleEffect.OPTS_LIMITS = {
     numParticles: [1, 300],
     life: [1, 10000],
     delay: [0, 10000],
@@ -205,7 +207,7 @@ ParticleEffect.OPTS_LIMITS = {
 
 };
 
-ParticleEffect.GRAPHABLE_FLAGS = {
+PEE.ParticleEffect.GRAPHABLE_FLAGS = {
     OFFSETX_BIT: 1,
     OFFSETY_BIT: 2,
     OFFSETZ_BIT: 4,
@@ -222,23 +224,23 @@ ParticleEffect.GRAPHABLE_FLAGS = {
 
 // regex to test for properly named graphable:
 // /^(min|max)(?=(Offset[X-Z]|Direction[X-Z]|Speed|Rotation)$)/
-ParticleEffect.prototype.enableGraphed = function (bitmask) {
+PEE.ParticleEffect.prototype.enableGraphed = function (bitmask) {
     this.opts.graphablesConfig |= bitmask;
 
 };
 
-ParticleEffect.prototype.disableGraphed = function (bitmask) {
+PEE.ParticleEffect.prototype.disableGraphed = function (bitmask) {
     this.opts.graphablesConfig = ~(~this.graphablesConfig | bitmask);
 
 };
 
-ParticleEffect.prototype.getEnabledGraphed = function () {
+PEE.ParticleEffect.prototype.getEnabledGraphed = function () {
 
     var arr = [],
         i = 0;
 
-    for (var flag in ParticleEffect.GRAPHABLE_FLAGS) {
-        if (ParticleEffect.GRAPHABLE_FLAGS[flag] & this.opts.graphablesConfig) {
+    for (var flag in PEE.ParticleEffect.GRAPHABLE_FLAGS) {
+        if (PEE.ParticleEffect.GRAPHABLE_FLAGS[flag] & this.opts.graphablesConfig) {
             var str = flag.toLowerCase().substr(0, flag.length - 4);
             if (str.match(/[xyz]$/)) {
                 str = str.substr(0, str.length - 1) + str.substr(-1).toUpperCase();
@@ -252,7 +254,7 @@ ParticleEffect.prototype.getEnabledGraphed = function () {
     return arr;
 };
 
-ParticleEffect.CHANNEL_FLAGS = {
+PEE.ParticleEffect.CHANNEL_FLAGS = {
     NUMPARTICLES_BIT: 1,
     LIFE_BIT: 2,
     DELAY_BIT: 4,
@@ -266,23 +268,23 @@ ParticleEffect.CHANNEL_FLAGS = {
     ROTATION_BIT: 1024
 };
 
-ParticleEffect.prototype.useOwnChannel = function (bitmask) {
+PEE.ParticleEffect.prototype.useOwnChannel = function (bitmask) {
 
     this.opts.channelConfig |= bitmask;
 };
 
-ParticleEffect.prototype.useMasterChannel = function (bitmask) {
+PEE.ParticleEffect.prototype.useMasterChannel = function (bitmask) {
 
     this.opts.channelConfig = ~(~this.channelConfig | bitmask);
 };
 
-ParticleEffect.prototype.getUsingOwnChannel = function () {
+PEE.ParticleEffect.prototype.getUsingOwnChannel = function () {
 
     var arr = [],
         i = 0;
 
-    for (var flag in ParticleEffect.GRAPHABLE_FLAGS) {
-        if (ParticleEffect.GRAPHABLE_FLAGS[flag] & this.opts.channelConfig) {
+    for (var flag in PEE.ParticleEffect.GRAPHABLE_FLAGS) {
+        if (PEE.ParticleEffect.GRAPHABLE_FLAGS[flag] & this.opts.channelConfig) {
             var str = flag.toLowerCase().substr(0, flag.length - 4);
             if (str.match(/[xyz]$/)) {
                 str = str.substr(0, str.length - 1) + str.substr(-1).toUpperCase();
@@ -302,7 +304,7 @@ ParticleEffect.prototype.getUsingOwnChannel = function () {
         fragmentShaders = [],
         activeProgramHandle;
 
-    ParticleEffect.prototype.getShaderManager = function (gl) {
+    PEE.ParticleEffect.prototype.getShaderManager = function (gl) {
 
         if (!_gl) {
             _gl = gl || console.error('You must pass a gl instance to ShaderManager the first time you use it.');
@@ -433,7 +435,7 @@ ParticleEffect.prototype.getUsingOwnChannel = function () {
     };
 }());
 
-ParticleEffect.defaultVertexShader = function () {
+PEE.ParticleEffect.defaultVertexShader = function () {
 
     var vArray = [];
     vArray[0] = 'attribute vec3 aVertexPosition;';
@@ -447,7 +449,7 @@ ParticleEffect.defaultVertexShader = function () {
     return vArray;
 };
 
-ParticleEffect.defaultFragmentShader = function () {
+PEE.ParticleEffect.defaultFragmentShader = function () {
 
     var fArray = [];
     fArray[0] = 'precision mediump float;';
@@ -464,7 +466,7 @@ ParticleEffect.defaultFragmentShader = function () {
     var _gl,
         textures = [];
 
-    ParticleEffect.prototype.getTextureManager = function (gl) {
+    PEE.ParticleEffect.prototype.getTextureManager = function (gl) {
 
         if (!_gl) {
             _gl = gl || console.error('You must pass a gl instance to TextureManager the first time you use it.');
