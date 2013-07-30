@@ -24,7 +24,7 @@ function engine (canvas, effectOpts, emittersOpts, engineCallback) {
 
     effectOpts = effectOpts || {};
     effectOpts.camera = camera;
-
+    
     effect = new ParticleEffect(gl, effectOpts, emittersOpts, effectCallback);
 
     controls.rotateSpeed = 1.0;

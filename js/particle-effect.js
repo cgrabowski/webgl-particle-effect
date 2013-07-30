@@ -2,11 +2,12 @@ ParticleEffect = (function (window, undefined) {
 
     return function (gl, effectOpts, emittersOpts, callback) {
 
-        if (THREE) {
-            THREE.Object3D.call(this);
-        }
         if (!gl || !gl instanceof WebGLRenderingContext) {
             throw new Error('ParticleEffect requires a valid gl context');
+        }
+
+        if (THREE) {
+            THREE.Object3D.call(this);
         }
 
         var self = this;
@@ -25,11 +26,35 @@ ParticleEffect = (function (window, undefined) {
         this.shaderManager = this.getShaderManager(gl);
         this.programHandle = this.shaderManager('createProgram')(this.vShader, this.fShader, this.shaderSourceType);
         this.useProgram = this.shaderManager('useProgram');
+
+        var graphableRegex = new RegExp(/^(min|max)(?=(Offset[X-Z]|Direction[X-Z]|Speed|Rotation)$)/),
+            limits = ParticleEffect.OPTS_LIMITS;
+
         for (var opt in ParticleEffect.DEFAULT_OPTS) {
             if (!this.opts.hasOwnProperty(opt)) {
                 this.opts[opt] = ParticleEffect.DEFAULT_OPTS[opt];
+
+            }
+            if (!this.opts.hasOwnProperty(opt + "Graph") && graphableRegex.test(opt)) {
+                this.opts[opt + "Graph"] = ParticleEffect.BASE_GRAPH_ARRAY.slice();
+                // cut off the 'min' or 'max' and then
+                // change the first char to lower case
+                this.opts[opt + "Graph"][2] = limits[opt.substr(3, 1).toLowerCase() + opt.substr(4)][0];
+                this.opts[opt + "Graph"][3] = limits[opt.substr(3, 1).toLowerCase() + opt.substr(4)][1];
             }
         }
+
+        // non-graphable opts
+        if (!this.opts.hasOwnProperty("numParticlesLimits")) {
+            this.opts.numParticlesLimits = limits.numParticles;
+        }
+        if (!this.opts.hasOwnProperty("lifeLimits")) {
+            this.opts.lifeLimits = limits.life;
+        }
+        if (!this.opts.hasOwnProperty("delayLimits")) {
+            this.opts.delayLimits = limits.delay;
+        }
+
         window.addEventListener('unload', function (event) {
             self.textureManager('dispose')();
             self.shaderManager('dispose')();
@@ -60,7 +85,6 @@ ParticleEffect = (function (window, undefined) {
             self.textureSources[i] = emittersOpts[i].textSource;
             self.emitters[i] = new ParticleEmitter(self, emittersOpts[i], i);
         }
-
         var images = [],
             loaded = 0;
 
@@ -74,6 +98,7 @@ ParticleEffect = (function (window, undefined) {
 
             try {
                 images[i].src = self.textureSources[i];
+
             } catch (e) {
                 console.error(e.message);
             }
@@ -88,7 +113,6 @@ ParticleEffect = (function (window, undefined) {
                 callback(self);
             }
         }
-
     }
 
 }(window));
@@ -99,6 +123,7 @@ if (THREE) {
 }
 
 ParticleEffect.prototype.render = function () {
+
     gl.enable(gl.BLEND);
     gl.disable(gl.DEPTH_TEST);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
@@ -130,6 +155,9 @@ ParticleEffect.DEFAULT_OPTS = {
     minDelay: 0,
     maxDelay: 500,
     //
+    minSpeed: 100,
+    maxSpeed: 500,
+    //
     minOffsetX: -2,
     maxOffsetX: 2,
     //
@@ -138,9 +166,6 @@ ParticleEffect.DEFAULT_OPTS = {
     //
     minOffsetZ: -10,
     maxOffsetZ: -9,
-    //
-    minSpeed: 100,
-    maxSpeed: 500,
     //
     minDirectionX: 0,
     maxDirectionX: 0,
@@ -159,29 +184,56 @@ ParticleEffect.DEFAULT_TEXTURES = ['igimg/plasma32-1.png', 'igimg/plasma32-2.png
 
 ParticleEffect.GRAPHABLES = ['offsetX', 'offsetY', 'offsetZ', 'speed', 'directionX', 'directionY', 'directionZ', 'rotation'];
 
-ParticleEffect.BASE_GRAPH_ARRAY = [0, 0, null, null, 1, 1, 1, 0];
+ParticleEffect.BASE_GRAPH_ARRAY = [0, -1, null, null, 1, 1, 2, -1];
 
+ParticleEffect.OPTS_LIMITS = {
+    numParticles: [1, 300],
+    life: [1, 10000],
+    delay: [0, 10000],
+    //
+    offsetX: [-10, 10],
+    offsetY: [-10, 10],
+    offsetZ: [-20, 0],
+    //
+    speed: [1, 1000],
+    //
+    directionX: [-1, 1],
+    directionY: [-1, 1],
+    directionZ: [-1, 1],
+    //
+    rotation: [-7200, 7200]
+
+};
 
 ParticleEffect.GRAPHABLE_FLAGS = {
     OFFSETX_BIT: 1,
     OFFSETY_BIT: 2,
     OFFSETZ_BIT: 4,
+    //
     SPEED_BIT: 8,
+    //
     DIRECTIONX_BIT: 16,
     DIRECTIONY_BIT: 32,
     DIRECTIONZ_BIT: 64,
+    //
     ROTATION_BIT: 128
+
 };
 
+// regex to test for properly named graphable:
+// /^(min|max)(?=(Offset[X-Z]|Direction[X-Z]|Speed|Rotation)$)/
 ParticleEffect.prototype.enableGraphed = function (bitmask) {
     this.opts.graphablesConfig |= bitmask;
+
 };
 
 ParticleEffect.prototype.disableGraphed = function (bitmask) {
     this.opts.graphablesConfig = ~(~this.graphablesConfig | bitmask);
+
 };
 
 ParticleEffect.prototype.getEnabledGraphed = function () {
+
     var arr = [],
         i = 0;
 
@@ -194,6 +246,7 @@ ParticleEffect.prototype.getEnabledGraphed = function () {
             arr.push(flag.toLowerCase().substr(0, flag.length - 4));
         }
         i++;
+
     }
 
     return arr;
@@ -214,14 +267,17 @@ ParticleEffect.CHANNEL_FLAGS = {
 };
 
 ParticleEffect.prototype.useOwnChannel = function (bitmask) {
+
     this.opts.channelConfig |= bitmask;
 };
 
 ParticleEffect.prototype.useMasterChannel = function (bitmask) {
+
     this.opts.channelConfig = ~(~this.channelConfig | bitmask);
 };
 
 ParticleEffect.prototype.getUsingOwnChannel = function () {
+
     var arr = [],
         i = 0;
 
@@ -318,6 +374,7 @@ ParticleEffect.prototype.getUsingOwnChannel = function () {
         };
 
         function getShaderFromHTML (gl, id) {
+
             var str = "",
                 shaderScript = document.getElementById(id),
                 shader,
@@ -348,11 +405,13 @@ ParticleEffect.prototype.getUsingOwnChannel = function () {
         }
 
         function getShaderFromArray (gl, array, type) {
+
             var str = array.join('');
             return getShaderFromString(str, type);
         }
 
         function getShaderFromString (str, type) {
+
             var shader;
             if (type === 'vertex') {
                 shader = gl.createShader(gl.VERTEX_SHADER);
@@ -375,6 +434,7 @@ ParticleEffect.prototype.getUsingOwnChannel = function () {
 }());
 
 ParticleEffect.defaultVertexShader = function () {
+
     var vArray = [];
     vArray[0] = 'attribute vec3 aVertexPosition;';
     vArray[1] = 'attribute vec2 aTextureCoord;';
@@ -388,6 +448,7 @@ ParticleEffect.defaultVertexShader = function () {
 };
 
 ParticleEffect.defaultFragmentShader = function () {
+
     var fArray = [];
     fArray[0] = 'precision mediump float;';
     fArray[1] = 'varying vec2 vTextureCoord;';
@@ -455,6 +516,7 @@ ParticleEffect.defaultFragmentShader = function () {
         };
 
         function createTexture (image) {
+
             var texture = _gl.createTexture();
             _gl.bindTexture(_gl.TEXTURE_2D, texture);
             _gl.pixelStorei(_gl.UNPACK_FLIP_Y_WEBGL, true);

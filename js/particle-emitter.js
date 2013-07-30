@@ -8,10 +8,35 @@ ParticleEmitter = (function (window, undefined) {
 
         this.emitterName = this.opts.emitterName = opts.emitterName || (index) ? 'emitter ' + index : 'emitter ' + effect.emitters.length;
 
+        var graphableRegex = new RegExp(/^(min|max)(?=(Offset[X-Z]|Direction[X-Z]|Speed|Rotation)$)/),
+            limits = ParticleEffect.OPTS_LIMITS;
+
         for (var opt in ParticleEffect.DEFAULT_OPTS) {
             if (!this.opts[opt]) {
                 this.opts[opt] = ParticleEffect.DEFAULT_OPTS[opt];
+
             }
+            if (!this.opts[opt + 'Graph'] && graphableRegex.test(opt)) {
+                this.opts[opt + 'Graph'] = ParticleEffect.BASE_GRAPH_ARRAY.slice();
+                this.opts[opt + 'Graph']
+                    .splice(2, 0,
+                    // cut off the 'min' or 'max' and then
+                    // change the first char to lower case
+                    limits[opt.substr(3, 1).toLowerCase() + opt.substr(4)][0],
+                    limits[opt.substr(3, 1).toLowerCase() + opt.substr(4)][1]
+                    );
+
+            }
+        }
+        // non-graphable opts
+        if (!this.opts.hasOwnProperty("numParticlesLimits")) {
+            this.opts.numParticlesLimits = limits.numParticles;
+        }
+        if (!this.opts.hasOwnProperty("lifeLimits")) {
+            this.opts.lifeLimits = limits.life;
+        }
+        if (!this.opts.hasOwnProperty("delayLimits")) {
+            this.opts.delayLimits = limits.delay;
         }
 
         this.effect = effect || null;
@@ -118,92 +143,71 @@ ParticleEmitter.prototype.render = function (delta) {
         directions = this.directions,
         rotations = this.rotations,
         randoms = this.randoms,
-        //
-        baseArray = ParticleEffect.BASE_GRAPH_ARRAY,
         rp = ParticleEmitter.randlerp,
-        m4 = mat4,
-        //
-        minDirectionXGraph,
-        maxDirectionXGraph,
-        minDirectionYGraph,
-        maxDirectionYGraph,
-        minDirectionZGraph,
-        maxDirectionZGraph,
-        //
-        minOffsetXGraph,
-        maxOffsetXGraph,
-        minOffsetYGraph,
-        maxOffsetYGraph,
-        minOffsetZGraph,
-        maxOffsetZGraph,
-        //
-        minSpeedGraph,
-        maxSpeedGraph,
-        minRotationGraph,
-        maxRotationGraph;
+        m4 = mat4;
 
     if (cConfig & cFlags.DIRECTIONX_BIT && gConfig & gFlags.DIRECTIONX_BIT) {
-        minDirectionXGraph = opts.minDirectionXGraph || baseArray;
-        maxDirectionXGraph = opts.maxDirectionXGraph || baseArray;
+        var minDirectionXGraph = opts.minDirectionXGraph,
+            maxDirectionXGraph = opts.maxDirectionXGraph;
     } else if (egConfig & gFlags.DIRECTIONX_BIT) {
-        minDirectionXGraph = effectOpts.minDirectionXGraph || baseArray;
-        maxDirectionXGraph = effectOpts.maxDirectionXGraph || baseArray;
+        var minDirectionXGraph = effectOpts.minDirectionXGraph,
+            maxDirectionXGraph = effectOpts.maxDirectionXGraph;
     }
 
     if (cConfig & cFlags.DIRECTIONY_BIT && gConfig & gFlags.DIRECTIONY_BIT) {
-        minDirectionYGraph = opts.minDirectionYGraph || baseArray;
-        maxDirectionYGraph = opts.maxDirectionYGraph || baseArray;
+        var minDirectionYGraph = opts.minDirectionYGraph,
+            maxDirectionYGraph = opts.maxDirectionYGraph;
     } else if (egConfig & gFlags.DIRECTIONY_BIT) {
-        minDirectionYGraph = effectOpts.minDirectionYGraph || baseArray;
-        maxDirectionYGraph = effectOpts.maxDirectionYGraph || baseArray;
+        var minDirectionYGraph = effectOpts.minDirectionYGraph,
+            maxDirectionYGraph = effectOpts.maxDirectionYGraph;
     }
 
     if (cConfig & cFlags.DIRECTIONZ_BIT && gConfig & gFlags.DIRECTIONZ_BIT) {
-        minDirectionZGraph = opts.minDirectionZGraph || baseArray;
-        maxDirectionZGraph = opts.maxDirectionZGraph || baseArray;
+        var minDirectionZGraph = opts.minDirectionZGraph,
+            maxDirectionZGraph = opts.maxDirectionZGraph;
     } else if (egConfig & gFlags.DIRECTIONZ_BIT) {
-        minDirectionZGraph = effectOpts.minDirectionZGraph || baseArray;
-        maxDirectionZGraph = effectOpts.maxDirectionZGraph || baseArray;
+        var minDirectionZGraph = effectOpts.minDirectionZGraph,
+            maxDirectionZGraph = effectOpts.maxDirectionZGraph;
     }
 
     if (cConfig & cFlags.OFFSETX_BIT && gConfig & gFlags.OFFSETX_BIT) {
-        minOffsetXGraph = opts.minOffsetXGraph || baseArray;
-        maxOffsetXGraph = opts.maxOffsetXGraph || baseArray;
+        var minOffsetXGraph = opts.minOffsetXGraph,
+            maxOffsetXGraph = opts.maxOffsetXGraph;
     } else if (egConfig & gFlags.OFFSETX_BIT) {
-        minOffsetXGraph = effectOpts.minOffsetXGraph || baseArray;
-        maxOffsetXGraph = effectOpts.maxOffsetXGraph || baseArray;
+        var minOffsetXGraph = effectOpts.minOffsetXGraph,
+            maxOffsetXGraph = effectOpts.maxOffsetXGraph;
     }
 
     if (cConfig & cFlags.OFFSETY_BIT && gConfig & gFlags.OFFSETY_BIT) {
-        minOffsetYGraph = opts.minOffsetYGraph || baseArray;
-        maxOffsetYGraph = opts.maxOffsetYGraph || baseArray;
+        var minOffsetYGraph = opts.minOffsetYGraph,
+            maxOffsetYGraph = opts.maxOffsetYGraph;
     } else if (egConfig & gFlags.OFFSETY_BIT) {
-        minOffsetYGraph = effectOpts.minOffsetYGraph || baseArray;
-        maxOffsetYGraph = effectOpts.maxOffsetYGraph || baseArray;
+        var minOffsetYGraph = effectOpts.minOffsetYGraph,
+            maxOffsetYGraph = effectOpts.maxOffsetYGraph;
     }
 
     if (cConfig & cFlags.OFFSETZ_BIT && gConfig & gFlags.OFFSETZ_BIT) {
-        minOffsetZGraph = opts.minOffsetZGraph || baseArray;
-        maxOffsetZGraph = opts.maxOffsetZGraph || baseArray;
+        var minOffsetZGraph = opts.minOffsetZGraph,
+            maxOffsetZGraph = opts.maxOffsetZGraph;
     } else if (egConfig & gFlags.OFFSETZ_BIT) {
-        minOffsetZGraph = effectOpts.minOffsetZGraph || baseArray;
-        maxOffsetZGraph = effectOpts.maxOffsetZGraph || baseArray;
+        var minOffsetZGraph = effectOpts.minOffsetZGraph,
+            maxOffsetZGraph = effectOpts.maxOffsetZGraph;
     }
 
     if (cConfig & cFlags.SPEED_BIT && gConfig & gFlags.SPEED_BIT) {
-        minSpeedGraph = opts.minSpeedGraph || baseArray;
-        maxSpeedGraph = opts.maxSpeedGraph || baseArray;
+        var minSpeedGraph = opts.minSpeedGraph,
+            maxSpeedGraph = opts.maxSpeedGraph;
     } else if (egConfig & gFlags.SPEED_BIT) {
-        minSpeedGraph = effectOpts.minSpeedGraph || baseArray;
-        maxSpeedGraph = effectOpts.maxSpeedGraph || baseArray;
+        var minSpeedGraph = effectOpts.minSpeedGraph,
+            maxSpeedGraph = effectOpts.maxSpeedGraph;
     }
 
     if (cConfig & cFlags.ROTATION_BIT && gConfig & gFlags.ROTATION_BIT) {
-        minRotationGraph = opts.minRotationGraph || baseArray;
-        maxRotationGraph = opts.maxRotationGraph || baseArray;
+        var minRotationGraph = opts.minRotationGraph,
+            maxRotationGraph = opts.maxRotationGraph;
     } else if (egConfig & gFlags.ROTATION_BIT) {
-        minRotationGraph = effectOpts.minRotationGraph || baseArray;
-        maxRotationGraph = effectOpts.maxRotationGraph || baseArray;
+        var minRotationGraph = effectOpts.minRotationGraph,
+            maxRotationGraph = effectOpts.maxRotationGraph;
     }
 
 
@@ -241,7 +245,7 @@ ParticleEmitter.prototype.render = function (delta) {
             }
 
             // minline y-axis value for the line segment -- [k + 6] is the slope, [k + 7] is the y-intercept
-            min = ((minDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionXGraph[k + 7]) + 1) * 0.5 * (maxDirectionX - minDirectionX);
+            min = minDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionXGraph[k + 7];
 
             // find the maxline line segment at the current life value
             k = 0;
@@ -250,10 +254,9 @@ ParticleEmitter.prototype.render = function (delta) {
             }
 
             // maxline y-axis value for the line segment -- [k + 6] is the slope, [k + 7] is the y-intercept
-            max = ((maxDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionXGraph[k + 7]) + 1) * 0.5 * (maxDirectionX - minDirectionX);
-            // check for NaN
+            max = maxDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionXGraph[k + 7];
+            // check for valid number
             if (max < Infinity && min < Infinity) {
-
                 directions[i * 3] = ParticleEmitter.lerp(min, max, randoms[i]);
             }
         }
