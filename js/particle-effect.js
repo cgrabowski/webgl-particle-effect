@@ -33,8 +33,8 @@ ParticleEffect = (function (window, undefined) {
         for (var opt in ParticleEffect.DEFAULT_OPTS) {
             if (!this.opts.hasOwnProperty(opt)) {
                 this.opts[opt] = ParticleEffect.DEFAULT_OPTS[opt];
-
             }
+
             if (!this.opts.hasOwnProperty(opt + "Graph") && graphableRegex.test(opt)) {
                 this.opts[opt + "Graph"] = ParticleEffect.BASE_GRAPH_ARRAY.slice();
                 // cut off the 'min' or 'max' and then
@@ -193,7 +193,7 @@ ParticleEffect.OPTS_LIMITS = {
     //
     offsetX: [-10, 10],
     offsetY: [-10, 10],
-    offsetZ: [-20, 0],
+    offsetZ: [-15, -5],
     //
     speed: [1, 1000],
     //
