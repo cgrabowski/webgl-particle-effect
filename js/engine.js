@@ -1,7 +1,7 @@
 var PEE = PEE || {};
 
-PEE.engine = (function (window, undefined) {
-    return function (canvas, effectOpts, emittersOpts, engineCallback) {
+PEE.engine = (function(window, undefined) {
+    return function(canvas, effectOpts, emittersOpts, engineCallback) {
 
         if (!canvas) {
             canvas = document.createElement('canvas');
@@ -21,12 +21,12 @@ PEE.engine = (function (window, undefined) {
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 
         var scene = new THREE.Scene(),
-            camera = new THREE.PerspectiveCamera(60, gl.viewportWidth / gl.viewportHeight, 1, 1000.0),
-            renderer = new THREE.WebGLRenderer({canvas: canvas}),
+                camera = new THREE.PerspectiveCamera(60, gl.viewportWidth / gl.viewportHeight, 1, 1000.0),
+                renderer = new THREE.WebGLRenderer({canvas: canvas}),
         controls = new THREE.TrackballControls(camera, canvas);
 
         effectOpts = effectOpts || {};
-        effectOpts.camera = camera,
+        effectOpts.camera = camera;
 
         effect = new PEE.ParticleEffect(gl, effectOpts, emittersOpts, effectCallback);
 
@@ -39,7 +39,7 @@ PEE.engine = (function (window, undefined) {
         controls.dynamicDampingFactor = 0;
         controls.target.set(0, 0, -10);
 
-        function resize (event) {
+        function resize(event) {
             canvas.width = window.innerWidth;
             canvas.height = canvas.width / 16 * 9;
             gl.viewPortWidth = canvas.width;
@@ -51,7 +51,7 @@ PEE.engine = (function (window, undefined) {
         window.addEventListener('resize', resize, false);
 
         // reset camera
-        window.addEventListener('keydown', function (event) {
+        window.addEventListener('keydown', function(event) {
             if (event.keyCode === 82) { // R key
                 controls.target.set(0, 0, -10);
                 controls._eye.set(0, 0, 10);
@@ -62,7 +62,7 @@ PEE.engine = (function (window, undefined) {
             }
         }, false);
 
-        function effectCallback () {
+        function effectCallback() {
             scene.add(effect);
             renderer.addPostPlugin(effect);
             render();
@@ -74,7 +74,7 @@ PEE.engine = (function (window, undefined) {
         }
 
         var rendering = true;
-        function render () {
+        function render() {
             if (rendering) {
                 requestAnimFrame(render);
                 renderer.render(scene, camera);
@@ -82,10 +82,11 @@ PEE.engine = (function (window, undefined) {
             }
         }
 
-        window.addEventListener('pause', function (event) {
+        window.addEventListener('pause', function(event) {
             rendering = false;
+            console.log(rendering);
         }, false);
-        window.addEventListener('resume', function (event) {
+        window.addEventListener('resume', function(event) {
             rendering = true;
             render();
         }, false);
