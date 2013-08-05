@@ -1,0 +1,198 @@
+commit b628eba145739d9b1e973d403c11b2ea9d0956f4
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Tue Jul 30 16:32:31 2013 -0400
+
+    Put everything in the PEE namespace.
+
+commit 65230d7621a530b3c72bb520ff5739b09282b92c
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Tue Jul 30 12:10:25 2013 -0400
+
+    Unrolled ParticleEmitter.render and added the y-axis range into particle calculations.
+
+commit 6ad6dc3fc29be1de2fea7452e3c785a243e026dd
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Tue Jul 30 11:03:41 2013 -0400
+
+    Graph data an setting limit data are now contained within the effect objects and emitter objects. Graph data for each setting are always initialized, even if a setting's graph is not turned on.
+
+commit bff1ea16fd6ce17dd33526abdff9bb2080cda8d2
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Sun Jul 28 12:05:42 2013 -0400
+
+    Wrapped effect constructor, emitter constructor, texture manager, and shader manager in self-excecuting functions.
+
+commit ccd20444dda20ff63f018d048cf23b2235308b27
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jul 22 13:42:37 2013 -0400
+
+    Default options are stored directly in the code instead of loaded through a JSON file.
+
+commit f9035951d133bb4235f7fde01b2a2dabc88465a2
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Sat Jul 20 18:39:33 2013 -0400
+
+    State of effect and gui is saved in local storage.
+
+commit f3e5dfc7660284559108a09a82c9d115683d3003
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Wed Jul 17 22:15:16 2013 -0400
+
+    Graph data for all graphables is piped to the render loop.
+
+commit 315c4e4f6cc47cd3ba8135b3ada4d4c90cf759b5
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Wed Jul 17 19:14:36 2013 -0400
+
+    Revamped data model.
+
+commit 08f8896e6bc0ad02806beaef1c476d5d14376e25
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jul 15 17:53:06 2013 -0400
+
+    Began to incorporate 'graphables' config flags.
+
+commit 5b380eb35ad615d2cf47d6ccdee0183ca9c65c65
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Sun Jul 14 15:25:32 2013 -0400
+
+    Added pause and resume event listeners to the engine.
+
+commit e2afbdcc3dd33a36ebae25f61800b07f1720a925
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Thu Jul 11 16:41:16 2013 -0400
+
+    Began working out a reasonable algorithm for direction change over time.
+
+commit 9636f4adaf4bac01e8e40029f59fce5145f38cf5
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Sun Jul 7 11:30:21 2013 -0400
+
+    Added non-minified three.js file. Inserted semicolons and brackets after reading a blog post by Brendan Eich regarding the matter.
+
+commit ea1a958186c225ec14b62a3a25b9de41a8ad306b
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Thu Jul 4 16:22:46 2013 -0400
+
+    Fixed window resize handling.
+
+commit 200f5b5886d277d944998ed8dcd6c1a2921ecb10
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Wed Jul 3 09:20:51 2013 -0400
+
+    Integration with three.js. ParticleEffect inherits Object3D and is rendered as a THREE.WebGLRenderer post plugin. Implemented THREE.TrackballControls for world transforms.
+
+commit fd0769bb259296444b21f3ea54929915f493e298
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Tue Jul 2 10:51:06 2013 -0400
+
+    Further refractored engine and ParticleEffect for more reasonable separation of concerns and to prepare to plug the effect into three.js.
+
+commit 911919d4ebd27dd5646799d03c5ed84a770657d7
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jul 1 15:22:18 2013 -0400
+
+    Created ParticleEffect.programManager interface.
+
+commit 9f04ba0264d254fd0434f436807072dc59590089
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jul 1 14:13:16 2013 -0400
+
+    Refractored engine and ParticleEffect in order to create better separation of concerns and to prepare to hook ParticleEffect into the three.js rendering loop.
+
+commit cc1462e2aabc13a550f7fb1375c648b7b7e12e6a
+Merge: cb6902a a095efd
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jul 1 12:47:40 2013 -0400
+
+    Fixed minor merge conflict.
+
+commit a095efdbb4f89472dd7adbab4c427d4df9cfb904
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jul 1 12:41:29 2013 -0400
+
+    Moved multiplication of projection and model-view matrices out of the shader.
+
+commit 0934284307a653d8c27ea067fdf669c0e91e3022
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jul 1 11:01:36 2013 -0400
+
+    Textures can only be accessed via the textureManager interface.
+
+commit cb6902ad3dab466dd05087a82afd47a5fdb57023
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jul 1 11:01:36 2013 -0400
+
+    Textures can only be accessed via the textureManager interface.
+
+commit ce7c9be4a396135abc678c67bf5cb558ef31b856
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jul 1 07:15:36 2013 -0400
+
+    ParticleEffect accepts html tag, string, or array for shader source. Default shaders moved from html into ParticleEffect as arrays.
+
+commit 76a94c5366df6491c6a3cb531a1b7c50ec65a259
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Sun Jun 30 11:36:04 2013 -0400
+
+    Textures can be switched on the fly.
+
+commit 56414259473b15e56fd1cf391514398b3ae71d85
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Sat Jun 29 18:25:26 2013 -0400
+
+    Implemented particle rotation. Opts can be passed as an argument of engine function.
+
+commit 3a6e15347e60beef56478c1371c21be268805139
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Fri Jun 28 16:25:25 2013 -0400
+
+    Implemented iterated assignment of emitter fields. Minor change to names in example.json.
+
+commit 66cbb6b6376929867da5ca28cb5a7ac26b2a8d80
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Fri Jun 28 13:57:00 2013 -0400
+
+    Fixed speed and start position of particles. Adjusted default values.
+
+commit 520e9f502124b28b52617de38628b6afa896b295
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Thu Jun 27 18:18:52 2013 -0400
+
+    Data is now stored in and loaded from JSON files.
+
+commit f1cfdc68d68d69ff05e82a099686748f9d8d3fa0
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Thu Jun 27 14:43:50 2013 -0400
+
+    Added blending to support transparency of example particle images.
+
+commit 61c975a10e97ccc8ec38c9a1c0a8aabd2df2c6c4
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jun 24 08:00:48 2013 -0400
+
+    Added a separate view matrix.
+
+commit 19fe74d8704f346774d25a20237049e303f26272
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Mon Jun 24 07:33:17 2013 -0400
+
+    Reduced buffers sizes to only be long enough to draw one particle.
+
+commit 46f4ace7518edb15b9129bc55e10317146f69f0f
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Sun Jun 23 17:09:51 2013 -0400
+
+    Updated to latest version of gl-matrix.js. Updated matrix calls for compatability. Added ParticleEmitter.lerp. Made a few other small changes.
+
+commit dfdeae1b6ef57168dea7360f421faaa9b81a85d5
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Sun Jun 23 11:28:01 2013 -0400
+
+    Made a working prototype. Created ParticleEffect object structure and implemented some conifgurable parameters.
+
+commit 47651db5ea858e05a60d74bba5078cc31dde9c2d
+Author: Christopher Grabowski <yourchristopher6334@gmail.com>
+Date:   Sat Jun 22 19:04:51 2013 -0400
+
+    Initial Commit

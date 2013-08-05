@@ -143,11 +143,11 @@ PEE.ParticleEffect.prototype.render = function () {
     }
 };
 
+// neccessary for a three.js plugin
 PEE.ParticleEffect.prototype.init = function () {
 };
 
 PEE.ParticleEffect.DEFAULT_OPTS = {
-    emitterName: "default",
     textSource: "images/particle.png",
     numParticles: 200,
     //
@@ -157,9 +157,6 @@ PEE.ParticleEffect.DEFAULT_OPTS = {
     minDelay: 0,
     maxDelay: 500,
     //
-    minSpeed: 100,
-    maxSpeed: 500,
-    //
     minOffsetX: -2,
     maxOffsetX: 2,
     //
@@ -168,6 +165,9 @@ PEE.ParticleEffect.DEFAULT_OPTS = {
     //
     minOffsetZ: -10,
     maxOffsetZ: -9,
+    //
+    minSpeed: 100,
+    maxSpeed: 500,
     //
     minDirectionX: 0,
     maxDirectionX: 0,
@@ -204,7 +204,6 @@ PEE.ParticleEffect.OPTS_LIMITS = {
     directionZ: [-1, 1],
     //
     rotation: [-7200, 7200]
-
 };
 
 PEE.ParticleEffect.GRAPHABLE_FLAGS = {
@@ -219,7 +218,6 @@ PEE.ParticleEffect.GRAPHABLE_FLAGS = {
     DIRECTIONZ_BIT: 64,
     //
     ROTATION_BIT: 128
-
 };
 
 // regex to test for properly named graphable:
@@ -248,9 +246,7 @@ PEE.ParticleEffect.prototype.getEnabledGraphed = function () {
             arr.push(flag.toLowerCase().substr(0, flag.length - 4));
         }
         i++;
-
     }
-
     return arr;
 };
 

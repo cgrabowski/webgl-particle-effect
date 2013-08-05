@@ -8,7 +8,7 @@ PEE.ParticleEmitter = (function (window, undefined) {
 
         this.opts = opts || {};
 
-        this.emitterName = this.opts.emitterName = opts.emitterName || (index) ? 'emitter ' + index : 'emitter ' + effect.emitters.length;
+        this.emitterName = this.opts.emitterName || ((index) ? 'emitter ' + index : 'emitter ' + effect.emitters.length);
 
         var graphableRegex = new RegExp(/^(min|max)(?=(Offset[X-Z]|Direction[X-Z]|Speed|Rotation)$)/),
             limits = PEE.ParticleEffect.OPTS_LIMITS;
@@ -16,8 +16,8 @@ PEE.ParticleEmitter = (function (window, undefined) {
         for (var opt in PEE.ParticleEffect.DEFAULT_OPTS) {
             if (!this.opts[opt]) {
                 this.opts[opt] = PEE.ParticleEffect.DEFAULT_OPTS[opt];
-
             }
+
             if (!this.opts.hasOwnProperty(opt + 'Graph') && graphableRegex.test(opt)) {
                 this.opts[opt + 'Graph'] = PEE.ParticleEffect.BASE_GRAPH_ARRAY.slice();
                 // cut off the 'min' or 'max' and then
@@ -153,7 +153,7 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
         minRotation = (cFlags['ROTATION_BIT']) & cConfig ? opts.minRotation : effectOpts.minRotation,
         //
         maxRotation = (cFlags['ROTATION_BIT']) & cConfig ? opts.maxRotation : effectOpts.maxRotation;
-    // If grap flag is set, use graph data.
+    // If graph flag is set, use graph data.
     // If channel flag is set, use emitter data.
     if (cConfig & cFlags.DIRECTIONX_BIT && gConfig & gFlags.DIRECTIONX_BIT) {
         var minDirectionXGraph = opts.minDirectionXGraph,
@@ -261,7 +261,7 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
             }
 
             // minline y-axis value for the line segment -- [k + 6] is the slope, [k + 7] is the y-intercept
-            min = range * minDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionXGraph[k + 7];
+            min = minDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionXGraph[k + 7];
 
             // find the maxline line segment at the current life value
             k = 0;
@@ -270,10 +270,10 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
             }
 
             // maxline y-axis value for the line segment -- [k + 6] is the slope, [k + 7] is the y-intercept
-            max = range * maxDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionXGraph[k + 7];
+            max = maxDirectionXGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionXGraph[k + 7];
             // check for valid number
             if (!isNaN(max) && !isNaN(min)) {
-                directions[i * 3] = randoms[i] * (max - min) + min;
+                directions[i * 3] = (randoms[i] * (max - min) + min) * 0.5 * range;
             }
         }
 
@@ -287,14 +287,14 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
             while (elapsed[i] / lives[i] > minDirectionYGraph[k + 4]) {
                 k += 4;
             }
-            min = range * minDirectionYGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionYGraph[k + 7];
+            min = minDirectionYGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionYGraph[k + 7];
             k = 0;
             while (elapsed[i] / lives[i] > maxDirectionYGraph[k + 4]) {
                 k += 4;
             }
-            max = range * maxDirectionYGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionYGraph[k + 7];
+            max = maxDirectionYGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionYGraph[k + 7];
             if (!isNaN(max) && !isNaN(min)) {
-                directions[i * 3 + 1] = randoms[i] * (max - min) + min;
+                directions[i * 3 + 1] = (randoms[i] * (max - min) + min) * 0.5 * range;
             }
         }
 
@@ -308,14 +308,14 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
             while (elapsed[i] / lives[i] > minDirectionZGraph[k + 4]) {
                 k += 4;
             }
-            min = range * minDirectionZGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionZGraph[k + 7];
+            min = minDirectionZGraph[k + 6] * (elapsed[i] / lives[i]) + minDirectionZGraph[k + 7];
             k = 0;
             while (elapsed[i] / lives[i] > maxDirectionZGraph[k + 4]) {
                 k += 4;
             }
-            max = range * maxDirectionZGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionZGraph[k + 7];
+            max = maxDirectionZGraph[k + 6] * (elapsed[i] / lives[i]) + maxDirectionZGraph[k + 7];
             if (!isNaN(max) && !isNaN(min)) {
-                directions[i * 3 + 2] = randoms[i] * (max - min) + min;
+                directions[i * 3 + 2] = (randoms[i] * (max - min) + min) * 0.5 * range;
             }
         }
 
@@ -330,15 +330,14 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
             while (elapsed[i] / lives[i] > minOffsetXGraph[k + 4]) {
                 k += 4;
             }
-            min = range * ((minOffsetXGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetXGraph[k + 7]) + 1) * 0.5 * (minOffsetXGraph[2] - minOffsetXGraph[3]);
+            min = minOffsetXGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetXGraph[k + 7];
             k = 0;
             while (elapsed[i] / lives[i] > maxOffsetXGraph[k + 4]) {
                 k += 4;
             }
-            max = range * ((maxOffsetXGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetXGraph[k + 7]) + 1) * 0.5 * (maxOffsetXGraph[2] - maxOffsetXGraph[3]);
+            max = maxOffsetXGraph[k + 6] * (elapsed[i] / lives[i]) + maxOffsetXGraph[k + 7];
             if (!isNaN(max) && !isNaN(min)) {
-
-                offsets[i * 3] = randoms[i] * (max - min) + min;
+                offsets[i * 3] = (randoms[i] * (max - min) + min) * 0.5 * range;
             }
         }
 
@@ -352,14 +351,14 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
             while (elapsed[i] / lives[i] > minOffsetYGraph[k + 4]) {
                 k += 4;
             }
-            min = range * minOffsetYGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetYGraph[k + 7];
+            min = minOffsetYGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetYGraph[k + 7];
             k = 0;
             while (elapsed[i] / lives[i] > maxOffsetYGraph[k + 4]) {
                 k += 4;
             }
-            max = range * maxOffsetYGraph[k + 6] * (elapsed[i] / lives[i]) + maxOffsetYGraph[k + 7];
+            max = maxOffsetYGraph[k + 6] * (elapsed[i] / lives[i]) + maxOffsetYGraph[k + 7];
             if (!isNaN(max) && !isNaN(min)) {
-                offsets[i * 3 + 1] = randoms[i] * (max - min) + min;
+                offsets[i * 3 + 1] = (randoms[i] * (max - min) + min) * 0.5 * range;
             }
         }
 
@@ -373,14 +372,14 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
             while (elapsed[i] / lives[i] > minOffsetZGraph[k + 4]) {
                 k += 4;
             }
-            min = range * minOffsetZGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetZGraph[k + 7];
+            min = minOffsetZGraph[k + 6] * (elapsed[i] / lives[i]) + minOffsetZGraph[k + 7];
             k = 0;
             while (elapsed[i] / lives[i] > maxOffsetZGraph[k + 4]) {
                 k += 4;
             }
-            max = range * maxOffsetZGraph[k + 6] * (elapsed[i] / lives[i]) + maxOffsetZGraph[k + 7];
+            max = maxOffsetZGraph[k + 6] * (elapsed[i] / lives[i]) + maxOffsetZGraph[k + 7];
             if (!isNaN(max) && !isNaN(min)) {
-                offsets[i * 3 + 2] = randoms[i] * (max - min) + min;
+                offsets[i * 3 + 2] = (randoms[i] * (max - min) + min) * 0.5 * range;
             }
         }
 
@@ -394,14 +393,14 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
             while (elapsed[i] / lives[i] > minSpeedGraph[k + 4]) {
                 k += 4;
             }
-            min = range * minSpeedGraph[k + 6] * (elapsed[i] / lives[i]) + minSpeedGraph[k + 7];
+            min = minSpeedGraph[k + 6] * (elapsed[i] / lives[i]) + minSpeedGraph[k + 7];
             k = 0;
             while (elapsed[i] / lives[i] > maxSpeedGraph[k + 4]) {
                 k += 4;
             }
-            max = range * maxSpeedGraph[k + 6] * (elapsed[i] / lives[i]) + maxSpeedGraph[k + 7];
+            max = maxSpeedGraph[k + 6] * (elapsed[i] / lives[i]) + maxSpeedGraph[k + 7];
             if (!isNaN(max) && !isNaN(min)) {
-                speeds[i * 3] = randoms[i] * (max - min) + min;
+                speeds[i * 3] = (randoms[i] * (max - min) + min) * 0.5 * range;
             }
         }
 
@@ -415,14 +414,14 @@ PEE.ParticleEmitter.prototype.render = function (delta) {
             while (elapsed[i] / lives[i] > minRotationGraph[k + 4]) {
                 k += 4;
             }
-            min = range * minRotationGraph[k + 6] * (elapsed[i] / lives[i]) + minRotationGraph[k + 7];
+            min = minRotationGraph[k + 6] * (elapsed[i] / lives[i]) + minRotationGraph[k + 7];
             k = 0;
             while (elapsed[i] / lives[i] > maxRotationGraph[k + 4]) {
                 k += 4;
             }
-            max = range * maxRotationGraph[k + 6] * (elapsed[i] / lives[i]) + maxRotationGraph[k + 7];
+            max = maxRotationGraph[k + 6] * (elapsed[i] / lives[i]) + maxRotationGraph[k + 7];
             if (!isNaN(max) && !isNaN(min)) {
-                rotations[i * 3] = randoms[i] * (max - min) + min;
+                rotations[i * 3] = (randoms[i] * (max - min) + min) * 0.5 * range;
             }
         }
 
