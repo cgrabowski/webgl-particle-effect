@@ -295,15 +295,15 @@ PEE.ParticleEffect.prototype.getUsingOwnChannel = function () {
 
 (function /*ShaderManager*/ () {
     var _gl,
-        programs = [],
-        vertexShaders = [],
-        fragmentShaders = [],
-        activeProgramHandle;
+        _programs = [],
+        _vertexShaders = [],
+        _fragmentShaders = [],
+        _activeProgramHandle;
 
     PEE.ParticleEffect.prototype.getShaderManager = function (gl) {
 
         if (!_gl) {
-            _gl = gl || console.error('You must pass a gl instance to ShaderManager the first time you use it.');
+            _gl = gl || console.error('You must pass a gl instance to getShaderManager the first time you use it.');
         }
 
         return function (method) {
@@ -340,30 +340,32 @@ PEE.ParticleEffect.prototype.getUsingOwnChannel = function () {
                     gl.enableVertexAttribArray(prog.textureCoordAttribute);
                     prog.mvpProjectionMatrixUniform = gl.getUniformLocation(prog, "uMVPMatrix");
                     prog.samplerUniform = gl.getUniformLocation(prog, "uSampler");
-                    programs.push(prog);
-                    vertexShaders.push(vertexShader);
-                    fragmentShaders.push(fragmentShader);
-                    return programs.length - 1;
+                    _programs.push(prog);
+                    _vertexShaders.push(vertexShader);
+                    _fragmentShaders.push(fragmentShader);
+                    return _programs.length - 1;
                 };
 
             } else if (method === 'useProgram') {
                 return function (index) {
-                    gl.useProgram(programs[index]);
-                    activeProgramHandle = index;
-                    return programs[index];
+                    gl.useProgram(_programs[index]);
+                    _activeProgramHandle = index;
+                    return _programs[index];
                 };
 
             } else if (method === 'getShaderVariable') {
                 return function (string) {
-                    return programs[activeProgramHandle][string];
+                    return _programs[_activeProgramHandle][string];
                 };
 
             } else if (method === 'dispose') {
                 return function () {
-                    for (var i = 0; i < programs.length; i++) {
-                        gl.deleteProgram(programs[i]);
+                    for (var i = 0; i < _programs.length; i++) {
+                        gl.deleteProgram(_programs[i]);
                     }
-                    vertexShaders = fragmentShaders = programs = null;
+                    _vertexShaders = [];
+                    _fragmentShaders = [];
+                    _programs = [];
                 };
 
             } else {
@@ -429,7 +431,7 @@ PEE.ParticleEffect.prototype.getUsingOwnChannel = function () {
         }
 
     };
-}());
+}()); // end ShaderManager
 
 PEE.ParticleEffect.defaultVertexShader = function () {
 
@@ -460,54 +462,64 @@ PEE.ParticleEffect.defaultFragmentShader = function () {
 
 (function /*TextureManager*/ () {
     var _gl,
-        textures = [];
+        _textures = [];
 
     PEE.ParticleEffect.prototype.getTextureManager = function (gl) {
-
         if (!_gl) {
-            _gl = gl || console.error('You must pass a gl instance to TextureManager the first time you use it.');
+            _gl = gl || console.error('You must pass a valid gl instance as an argument the first time you call getTextureManager.');
         }
 
         return function (method) {
+
             if (method === 'add') {
-                return function (images) {
-                    if (!typeof(images) === 'array') {
-                        textures.push(createTexture(images));
-                        return textures.length - 1;
-                    } else {
-                        var firstHandle = textures.length;
-                        for (var i = 0; i < images.length; i++) {
-                            textures.push(createTexture(images[i]));
+                return function (imageArg) {
+                    if (imageArg instanceof Array) {
+                        var firstHandle = _textures.length;
+
+                        for (var i = 0; i < imageArg.length; i++) {
+                            _textures.push(createTexture(imageArg[i]));
                         }
                         return firstHandle;
+                    } else {
+                        console.log(typeof imageArg);
+                        _textures.push(createTexture(imageArg));
+                        return _textures.length - 1;
                     }
                 };
+
             } else if (method === 'bind') {
                 return function (index) {
                     return function () {
-                        _gl.bindTexture(_gl.TEXTURE_2D, textures[index]);
+                        _gl.bindTexture(_gl.TEXTURE_2D, _textures[index]);
                     };
                 };
+
+            } else if (method === 'getTextures') {
+                return _textures;
+
             } else if (method === 'remove') {
                 return function (index) {
-                    _gl.deleteTexture(textures[index]);
-                    textures.splice(index, 1);
+                    _gl.deleteTexture(_textures[index]);
+                    _textures.splice(index, 1);
                 };
+
             } else if (method === 'replace') {
                 return function (image, index) {
-                    var oldTexture = textures[index];
-                    textures[index] = createTexture(image);
+                    var oldTexture = _textures[index];
+                    _textures[index] = createTexture(image);
                     _gl.deleteTexture(oldTexture);
-                    return textures[index];
+                    return _textures[index];
                 };
+
             } else if (method === 'dispose') {
                 return function () {
-                    for (var i = 0; i < textures.length; i++) {
+                    for (var i = 0; i < _textures.length; i++) {
                         ;
-                        _gl.deleteTexture(textures[i]);
+                        _gl.deleteTexture(_textures[i]);
                     }
-                    textures = null;
+                    _textures = [];
                 };
+
             } else {
                 throw new Error('textureManager\'s argument must be a method name: init, add, get, remove, replace, or dispose');
             }
