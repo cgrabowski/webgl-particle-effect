@@ -84,7 +84,6 @@ PEE.engine = (function(window, undefined) {
 
         window.addEventListener('pause', function(event) {
             rendering = false;
-            console.log(rendering);
         }, false);
         window.addEventListener('resume', function(event) {
             rendering = true;

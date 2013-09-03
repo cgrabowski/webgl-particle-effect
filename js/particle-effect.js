@@ -481,7 +481,6 @@ PEE.ParticleEffect.defaultFragmentShader = function () {
                         }
                         return firstHandle;
                     } else {
-                        console.log(typeof imageArg);
                         _textures.push(createTexture(imageArg));
                         return _textures.length - 1;
                     }
