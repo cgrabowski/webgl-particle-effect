@@ -1,4 +1,4 @@
-[webgl-particle-effect](http://www.particleeffect.org)
+[webgl-particle-effect](http://bit.ly/1GHwRPt)
 =====================
 
 Above Link is to editor GUI for webgl-particle-effect-editor.
